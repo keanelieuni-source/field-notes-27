@@ -1,0 +1,33 @@
+name: Publish dashboard changes
+on:
+  push:
+    branches: [main]
+    paths: [index.html, snapshots.json, workbook.b64]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/configure-pages@v5
+      - name: Prepare public files only
+        run: |
+          mkdir public
+          cp index.html snapshots.json workbook.b64 public/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - name: Deploy validated snapshot
+        id: deployment
+        uses: actions/deploy-pages@v4
