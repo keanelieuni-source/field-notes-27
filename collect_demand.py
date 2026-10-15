@@ -62,6 +62,12 @@ def validate(o,r,old_o,old_r):
     require(old_r['tokenSpend']['periodEnd']<=r['tokenSpend']['periodEnd']<=date.today().isoformat(),'Ramp token period regressed/future')
     require(len(r['tokenSpend']['makers'])>=8 and all(numeric(x['index']) for x in r['tokenSpend']['makers']),'Ramp maker index invalid')
     require({'Anthropic','OpenAI'}<={x['maker'] for x in r['tokenSpend']['makers']},'Ramp major makers missing')
+    require(len({x['maker'] for x in r['tokenSpend']['makers']})==len(r['tokenSpend']['makers']),'Duplicate Ramp makers')
+    oldmakers={x['maker']:x['index'] for x in old_r['tokenSpend']['makers']}
+    for x in r['tokenSpend']['makers']:
+        if x['maker'] in ['Anthropic','OpenAI']:require(.1<=x['index']/oldmakers[x['maker']]<=10,'Major maker index move requires review')
+    oldfin={x['status']:x['medianSpendPerEmployee'] for x in old_r['financingStatus']}
+    for x in r['financingStatus']:require(.25<=x['medianSpendPerEmployee']/oldfin[x['status']]<=4,'Financing spend move requires review')
 
 def collect(old_o,old_r,now):
     OUT.mkdir(exist_ok=True)
