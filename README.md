@@ -32,3 +32,7 @@ Open http://localhost:8000. Do not double-click `index.html`: browsers can block
 No earlier Claude history was supplied, so a price change cannot be established until another date is stored. Public site visitors can download the data. VM availability was not checked behind login.
 
 Sources: https://www.latitude.sh/pricing , https://openrouter.ai/rankings , https://ramp.com/data/ai-index . OpenRouter rankings data is CC BY 4.0: https://creativecommons.org/licenses/by/4.0/ .
+
+## Read-only collector trial
+
+Actions > Latitude collector trial > Run workflow launches Chromium and reads the three public billing views. It also runs daily at 21:17 UTC. Output JSON and screenshots are kept as the `latitude-trial` artifact for 7 days. The workflow has read-only permissions and never changes `snapshots.json` or the dashboard. It is a collection/access test, not a full automatic refresh: location details, schema mapping, and validation still need adding. The first GitHub-runner test returned HTTP 200 and matched the baseline GPU prices; future access is not guaranteed.
