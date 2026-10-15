@@ -1,4 +1,5 @@
-import copy,unittest
+import copy,unittest,io
+from contextlib import redirect_stdout
 from datetime import datetime,timezone
 from collect_benchmark import parse,update
 NOW=datetime(2026,10,15,4,tzinfo=timezone.utc)
@@ -14,7 +15,9 @@ class Tests(unittest.TestCase):
   with self.assertRaises(ValueError):parse(d,NOW)
  def test_failure_preserves_direct_and_last_good(self):
   d={'snapshots':{'2026-10-15':{'capturedAt':NOW.isoformat(),'latitude':{'plans':[1]},'gpuEconomy':{'rows':['old']}}}};old=copy.deepcopy(d)
-  update(d,lambda:(_ for _ in ()).throw(ValueError('fail')),NOW)
+  with redirect_stdout(io.StringIO()) as test_log:
+   update(d,lambda:(_ for _ in ()).throw(ValueError('fail')),NOW)
+  self.assertIn('last good data retained: fail',test_log.getvalue())
   self.assertEqual(d['snapshots']['2026-10-15']['latitude'],old['snapshots']['2026-10-15']['latitude']);self.assertEqual(d['snapshots']['2026-10-15']['gpuEconomy'],old['snapshots']['2026-10-15']['gpuEconomy']);self.assertFalse(d['snapshots']['2026-10-15']['gpuEconomyStatus']['ok'])
  def test_duplicate(self):
   d=fixture();d['prices']*=2
