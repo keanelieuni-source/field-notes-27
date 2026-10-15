@@ -102,10 +102,16 @@ rows["Read me"] = [{"note": x} for x in ["Latitude prices are per whole server; 
 comparison_path=ROOT/'comparison_data.json'
 if comparison_path.exists():
     comp=json.loads(comparison_path.read_text())
-    if comp.get('semiAnalysis'):
-        rows['SemiAnalysis CSV']=[{'Date':p['date'],'A100 USD/GPU-hr':p['a100'],'H100 USD/GPU-hr':p['h100'],'B200 USD/GPU-hr':p['b200'],'Source':'User-supplied SemiAnalysis CSV; missing observations blank'}for p in comp['semiAnalysis']]
+    rows['SemiAnalysis CSV']=[{'Date':p['date'],'A100 USD/GPU-hr':p['a100'],'H100 USD/GPU-hr':p['h100'],'B200 USD/GPU-hr':p['b200'],'Source':'User-supplied SemiAnalysis CSV; missing observations blank'}for p in comp['semiAnalysis']]
     rows['GPU aggregate history']=[{'Week start':p['date'],'GPU':a['gpu'],'Series':a['name'],'Origin':a['kind'],'Median USD/GPU-hr':p.get('median'),'Cheapest USD/GPU-hr':p.get('cheapest'),'Providers':p.get('providers'),'Vintage':p.get('vintage'),'Source':a['source']}for a in comp['aggregates']for p in a['points']]
     rows['Seller observations']=[{'Date':p['date'],'GPU':q['gpu'],'Seller':q['provider'],'Instance':q.get('instance'),'Region':q.get('region'),'Observed USD/GPU-hr':p['value'],'Original node USD/hr':q.get('node_usd_hr') if p['date']==q.get('read_date') else p.get('originalNodePrice'),'GPU count':q.get('gpu_count') or p.get('gpuCount'),'Observation origin':p['origin'],'Verification':q['verification'],'Source':q['source_url']}for q in comp['sellerObservations']for p in q['points']]
+    semi={p['date']:p for p in comp['semiAnalysis']};rows['Semi vs Latitude']=[]
+    for lane in comp['latitude']:
+        if lane['gpu']!='h100':continue
+        for p in lane['points']:
+            index=semi.get(p['date'],{}).get('h100');v=p['value']
+            rows['Semi vs Latitude'].append({'Observed date':p['date'],'Plan':p['id'],'Latitude term':p['term'],'Latitude whole plan USD/hr':p['originalNodePrice'],'GPU count':p['gpuCount'],'Latitude derived USD/GPU-hr':v,'SemiAnalysis H100 USD/GPU-hr':index,'Level difference USD/GPU-hr':v-index if v is not None and index is not None else None,'Percent vs SemiAnalysis':(v/index-1)*100 if v is not None and index else None,'Overlap status':'One observed date only; no direction correlation established' if len(lane['points'])<2 else 'Observed dates only, no missing-day fill','Caveat':lane['caveat'],'Source':p['source']})
+    rows['Read me'].insert(0,{'note':'SemiAnalysis GPU Pricing Index: https://gpu-index.semianalysis.com/. Initial CSV is user supplied; later dates come from the daily public-data endpoint. H100/B200 blanks on 23-24 May 2026 remain blank. GPU Economy own and reconstructed histories are distinct. Seller observations are sparse points, not fabricated curves. Latitude overlap only begins with our own capture. Source credit does not imply independent verification of this composite.'})
 # Readable headers, units, stock colors and filters are rebuilt every day.
 from openpyxl.styles import Alignment
 from openpyxl.formatting.rule import CellIsRule
@@ -114,7 +120,6 @@ from openpyxl.utils import get_column_letter
 order = ["Read me", "Semi vs Latitude", "SemiAnalysis CSV", "GPU aggregate history", "Seller observations", "GPU stock and prices", "Latitude price eras", "Competitor price eras", "Market since Latitude"] + [n for n in rows if n not in ["Read me", "Semi vs Latitude", "SemiAnalysis CSV", "GPU aggregate history", "Seller observations", "GPU stock and prices", "Latitude price eras", "Competitor price eras", "Market since Latitude"]]
 labels = {"Latitude whole plan USD/hr":"Latitude whole plan\nUSD/hr","Latitude derived USD/GPU-hr":"Latitude derived\nUSD/GPU-hr","SemiAnalysis H100 USD/GPU-hr":"SemiAnalysis H100\nUSD/GPU-hr","Level difference USD/GPU-hr":"Level difference\nUSD/GPU-hr","Percent vs SemiAnalysis":"Percent vs SemiAnalysis","Original node USD/hr":"Original node\nUSD/hr","Observed USD/GPU-hr":"Observed\nUSD/GPU-hr","A100 USD/GPU-hr":"A100 USD/GPU-hr","H100 USD/GPU-hr":"H100 USD/GPU-hr","B200 USD/GPU-hr":"B200 USD/GPU-hr","snapshotDate":"Snapshot date", "billingTerm":"Latitude term", "originalUnit":"Original quote unit", "hourly":"Hourly USD/hr", "monthly":"Hourly USD/mo", "reservedMonthlyHourly":"Monthly USD/hr", "reservedMonthlyMonthly":"Monthly USD/mo", "reservedYearlyHourly":"Yearly USD/hr", "reservedYearlyAnnual":"Yearly USD/year", "observedUnchangedDays":"Observed unchanged days", "lastPriceChangeDate":"Last observed change date", "lastObservedChangeDate":"Last observed change date", "quoteMoveSinceLatitudeUsdHourly":"Market move USD/hr", "originalQuoteHourly":"Quote USD/hr", "currentUsdHourly":"Current USD/hr", "previousUsdHourly":"Previous USD/hr", "changeUsdHourly":"Change USD/hr", "quotePreviousObservedUsdHourly":"Quote from USD/hr", "quoteCurrentObservedUsdHourly":"Quote to USD/hr", "latitudePreviousObservedUsdHourly":"Latitude from USD/hr", "latitudeCurrentObservedUsdHourly":"Latitude to USD/hr"}
 for idx,name in enumerate(order):
-    if name not in rows:continue
     records=rows[name];ws=wb.create_sheet(name)
     if not records: continue
     headers = list(dict.fromkeys(k for row in records for k in row))
