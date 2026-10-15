@@ -26,7 +26,10 @@ def collect():
         for term in ['Hourly','Monthly','Paid yearly']:
             buttons=page.get_by_role('button',name=term,exact=True)
             require(buttons.count()>=3, 'Missing billing selectors: '+term)
-            for i in range(buttons.count()): buttons.nth(i).click()
+            for i in range(buttons.count()):
+                buttons.nth(i).click()
+                page.wait_for_function("e=>!e.className.includes('hover:text-v2-slate-8')",arg=buttons.nth(i).element_handle())
+            page.wait_for_function("term=>[...document.querySelectorAll('button')].filter(e=>e.innerText===term).every(e=>!e.className.includes('hover:text-v2-slate-8'))",arg=term)
             views[term]=page.locator('table').evaluate_all('ts=>ts.map(t=>[...t.rows].map(r=>[...r.cells].map(c=>c.innerText)))')
         base=[t for t in views['Hourly'] if t and t[0] and t[0][0]=='PLAN']
         require(len(base)==4, 'Expected GPU, Gen4, Gen3 and VM tables')
@@ -65,6 +68,7 @@ def collect():
                 require(len(locs)>0,'No locations: '+ident)
                 match=next((l for l in locs if l['hourly']==h['hr']),None)
                 require(match is not None and match['monthly'] is not None,'Overview missing matching location: '+ident)
+                require(match['reservedMonthlyHourly']==m['hr'] and match['reservedMonthlyMonthly']==m['mo'] and match['reservedYearlyHourly']==y['hr'] and match['reservedYearlyAnnual']==y['yr'],'Overview and location billing terms disagree: '+ident)
                 h['mo']=match['monthly']
             priced=[l for l in locs if l['hourly'] is not None];lo=min((l['hourly'] for l in priced),default=None);hi=max((l['hourly'] for l in priced),default=None)
             result.append({'id':ident,'category':category,'hardware':r[1].replace('\n',' '),'memory':r[2].replace('\n',' '),'hourly':h['hr'],'monthly':h.get('mo'),'reservedMonthlyHourly':m['hr'],'reservedMonthlyMonthly':m['mo'],'reservedYearlyHourly':y['hr'],'reservedYearlyMonthly':None,'reservedYearlyAnnual':y['yr'],'source':'https://www.latitude.sh/pricing','locations':locs,'cheapestLocations':[l['location'] for l in priced if l['hourly']==lo],'mostExpensiveLocations':[l['location'] for l in priced if l['hourly']==hi],'locationHourlyMin':lo,'locationHourlyMax':hi,'availability':f"{sum(l['status']=='CURRENTLY IN STOCK' for l in locs)} of {len(locs)} listed locations in stock" if locs else 'Not verified by location','basis':'Direct displayed billing terms. Annual totals retained. Missing values are null.'})
@@ -81,6 +85,13 @@ def main():
             if a is not None: require(.5<=b/a<=1.5,'Price move exceeds 50% safety bound: '+ident+' '+k)
         require(p['hardware']==old[ident]['hardware'] and p['memory']==old[ident]['memory'],'Hardware changed; manual validation needed: '+ident)
         require({l['location'] for l in p['locations']}=={l['location'] for l in old[ident]['locations']},'Location set changed; manual validation needed: '+ident)
+        for loc in p['locations']:
+            oldloc=next((x for x in old[ident]['locations'] if x['location']==loc['location']),None)
+            require(oldloc is not None,'Unknown location: '+ident)
+            for k in FIELDS:
+                a,b=oldloc.get(k),loc.get(k)
+                require((a is None)==(b is None),'Location price field changed: '+ident+' '+loc['location']+' '+k)
+                if a is not None:require(.5<=b/a<=1.5,'Location price move exceeds safety bound: '+ident+' '+loc['location']+' '+k)
         if old[ident].get('source'):p['source']=old[ident]['source']
     now=datetime.now(ZoneInfo('Australia/Sydney'));key=now.date().isoformat();snap=copy.deepcopy(previous)
     snap['date']=key;snap['capturedAt']=now.isoformat(timespec='seconds');snap['latitude']['plans']=plans
