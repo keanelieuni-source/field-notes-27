@@ -150,7 +150,7 @@ button,summary{min-height:44px}summary{padding:8px 0}.model-row{display:flex;jus
   <footer>
     <p>The page loads the latest published snapshot when opened. Reload published data reads the stored JSON again; it does not collect from source sites. Earlier dates remain in the history.</p>
     <p id="basisNote"></p>
-    <p>OpenRouter rankings data is licensed CC BY 4.0. Ramp figures come from Ramp AI Index charts and chart data. Source periods can differ from the capture date.</p>
+    <p>OpenRouter rankings data is licensed CC BY 4.0. Ramp figures come from Ramp AI Index charts and chart data. OpenRouter and Ramp are retained at their shown source periods; the daily update currently refreshes Latitude only.</p>
   </footer>
 </main>
 
@@ -183,7 +183,7 @@ button,summary{min-height:44px}summary{padding:8px 0}.model-row{display:flex;jus
     var s=latest();
     if(!s){$("status").textContent=state.loading?"Loading stored data…":state.db?"No snapshots stored yet. Ask Claude to refresh the compute pricing monitor.":"No verified snapshot loaded.";return}
     var n=state.snaps.length;
-    $("status").textContent="Data as of "+fmtDate(s.capturedAt)+". "+n+(n===1?" snapshot":" snapshots")+" stored.";
+    $("status").textContent="Latitude captured "+fmtDate(s.latitude.capturedAt||s.capturedAt)+". "+n+(n===1?" snapshot":" snapshots")+" stored.";
   }
 
   function renderGpu(){
