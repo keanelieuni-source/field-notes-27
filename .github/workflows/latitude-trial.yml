@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '17 21 * * *'
+    - cron: '37 21 * * *'
+    - cron: '17 22 * * *'
 permissions:
   contents: read
 concurrency:
@@ -16,24 +18,44 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - name: Skip duplicate scheduled source collection for Sydney day
+        id: daily_guard
+        run: |
+          python - <<'PYCODE'
+          import datetime,json,os
+          from zoneinfo import ZoneInfo
+          today=datetime.datetime.now(ZoneInfo('Australia/Sydney')).date().isoformat()
+          with open('snapshots.json') as f:
+              exists=today in json.load(f)['snapshots']
+          skip=os.environ.get('GITHUB_EVENT_NAME')=='schedule' and exists
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              print('skip='+str(skip).lower(),file=f)
+          print('Sydney date:',today,'already stored:',exists,'skip source collection:',skip)
+          PYCODE
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: pip install playwright==1.55.0 openpyxl==3.1.5
       - run: python -m playwright install --with-deps chromium
+        if: steps.daily_guard.outputs.skip != 'true'
       - name: Run safety regression tests
+        if: steps.daily_guard.outputs.skip != 'true'
         run: |
           python test_collector.py
           python test_demand.py
       - name: Collect and validate Latitude, OpenRouter and Ramp
+        if: steps.daily_guard.outputs.skip != 'true'
         run: python collect_latitude.py
       - name: Collect optional GPU Economy benchmark
+        if: steps.daily_guard.outputs.skip != 'true'
         continue-on-error: true
         run: python test_benchmark.py && python collect_benchmark.py
       - name: Optional GPU Economy aggregate history (one conditional request)
+        if: steps.daily_guard.outputs.skip != 'true'
         continue-on-error: true
         run: python collect_history.py
       - name: Optional SemiAnalysis index (one GET, no retries)
+        if: steps.daily_guard.outputs.skip != 'true'
         continue-on-error: true
         run: python collect_semianalysis.py
       - name: Build comparison from stored observations
