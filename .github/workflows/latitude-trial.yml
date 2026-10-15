@@ -58,6 +58,9 @@ jobs:
           path: collector-output/
           retention-days: 7
   deploy:
+    concurrency:
+      group: github-pages-deploy
+      cancel-in-progress: false
     needs: collect
     runs-on: ubuntu-latest
     permissions:
