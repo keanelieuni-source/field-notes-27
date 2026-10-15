@@ -1,27 +1,68 @@
-name: Latitude collector trial
+name: Latitude daily update
 on:
   workflow_dispatch:
   schedule:
     - cron: '17 21 * * *'
 permissions:
   contents: read
+concurrency:
+  group: latitude-update
+  cancel-in-progress: false
 jobs:
-  capture:
+  collect:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install playwright==1.55.0
+      - run: pip install playwright==1.55.0 openpyxl==3.1.5
       - run: python -m playwright install --with-deps chromium
-      - name: Capture native Latitude billing views
-        run: python latitude_trial.py
-      - name: Keep raw output and screenshots
+      - name: Collect and validate native billing terms and locations
+        run: python collect_latitude.py
+      - name: Rebuild Excel history
+        run: python rebuild_workbook.py
+      - name: Commit validated data only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add snapshots.json workbook.b64
+          if ! git diff --cached --quiet; then
+            git commit -m 'Refresh validated Latitude snapshot'
+            git push
+          fi
+      - name: Keep collection evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: latitude-trial
-          path: trial-output/
+          name: latitude-collection
+          path: collector-output/
           retention-days: 7
+  deploy:
+    needs: collect
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/configure-pages@v5
+      - name: Prepare public files only
+        run: |
+          mkdir public
+          cp index.html snapshots.json workbook.b64 public/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - name: Deploy validated snapshot
+        id: deployment
+        uses: actions/deploy-pages@v4
