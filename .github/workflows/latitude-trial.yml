@@ -1,4 +1,4 @@
-name: Latitude daily update
+name: Compute monitor daily update
 on:
   workflow_dispatch:
   schedule:
@@ -21,7 +21,11 @@ jobs:
           python-version: '3.12'
       - run: pip install playwright==1.55.0 openpyxl==3.1.5
       - run: python -m playwright install --with-deps chromium
-      - name: Collect and validate native billing terms and locations
+      - name: Run safety regression tests
+        run: |
+          python test_collector.py
+          python test_demand.py
+      - name: Collect and validate Latitude, OpenRouter and Ramp
         run: python collect_latitude.py
       - name: Rebuild Excel history
         run: python rebuild_workbook.py
@@ -31,7 +35,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add snapshots.json workbook.b64
           if ! git diff --cached --quiet; then
-            git commit -m 'Refresh validated Latitude snapshot'
+            git commit -m 'Refresh validated compute monitor snapshot'
             git pull --rebase origin main
             git push
           fi
