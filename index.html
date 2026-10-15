@@ -290,7 +290,7 @@ function renderBenchmarkGraph(){
  $('benchmarkSelect').onchange=plot;plot();
 }
 
-function labelTables(){document.querySelectorAll('table').forEach(t=>{const h=[...t.querySelectorAll('thead th')].map(x=>x.innerText);t.querySelectorAll('tbody tr').forEach(r=>[...r.cells].forEach((c,i)=>{if(i)c.dataset.label=h[i]?.replace(/per plan/g,'').trim()||c.dataset.label||''}))})}
+function labelTables(){document.querySelectorAll('table').forEach(t=>{const h=[...t.querySelectorAll('thead th')].map(x=>x.textContent);t.querySelectorAll('tbody tr').forEach(r=>[...r.cells].forEach((c,i)=>{if(i)c.dataset.label=h[i]?.replace(/per plan/g,'').trim()||c.dataset.label||''}))})}
 async function load(){try{const response=await fetch('snapshots.json',{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);const d=await response.json();state.snaps=Object.values(d.snapshots).sort((a,b)=>a.capturedAt.localeCompare(b.capturedAt));if(!state.snaps.length)throw Error('No snapshots');state.loading=false;render();toast('Published data loaded.')}catch(e){toast('Could not load verified data: '+e.message)}}
 $('checkBtn').onclick=load;
 $('dlBtn').onclick=async()=>{try{const r=await fetch('workbook.b64',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const raw=atob((await r.text()).trim()),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0)),u=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));const a=document.createElement('a');a.href=u;a.download='compute-pricing-monitor.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(u),60000);toast('Excel history downloaded.')}catch(e){toast('Download failed: '+e.message)}};
