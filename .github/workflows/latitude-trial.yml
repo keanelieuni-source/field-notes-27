@@ -32,6 +32,7 @@ jobs:
           git add snapshots.json workbook.b64
           if ! git diff --cached --quiet; then
             git commit -m 'Refresh validated Latitude snapshot'
+            git pull --rebase origin main
             git push
           fi
       - name: Keep collection evidence
