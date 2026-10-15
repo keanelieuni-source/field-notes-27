@@ -18,9 +18,9 @@ Open http://localhost:8000. Do not double-click `index.html`: browsers can block
 2. Copy the latest entry under `snapshots` to a new `YYYY-MM-DD` key, change its `date` and `capturedAt`, and replace values with verified readings. Keep every earlier date. A second refresh on the same date replaces only that date's entry. JSON `null` means unverified or unavailable, not zero.
 3. For Latitude, check Hourly, Monthly, and Paid yearly separately. Prices are USD per whole server, not per GPU. Keep yearly totals annual. Do not calculate a price that should be read. Check location prices and stock separately. Keep source dates for OpenRouter and Ramp; Ramp's volume view is indexed spend, not raw token counts or USD.
 4. Run `python3 -m json.tool snapshots.json > /dev/null`, then run `python3 rebuild_workbook.py` to rebuild `history.xlsx` and `workbook.b64` from all snapshots. Preview locally and check prices, notes, and the download.
-5. In GitHub, commit changed `snapshots.json` and `workbook.b64` to `main` (or use Add file > Upload files and replace those files). Pages republishes automatically. Check the deployment in Actions, then reload the site.
+5. In GitHub, commit changed `snapshots.json` and `workbook.b64` to `main` (or use Add file > Upload files and replace those files). The Publish dashboard changes workflow republishes Pages automatically. Check the deployment in Actions, then reload the site.
 
-`Reload published data` reads the stored JSON again. It does not collect from source websites. There is no scheduled collector in this repository. Future collection can be manual or your own script, without Instinct.
+`Reload published data` reads the stored JSON again. It does not collect from source websites. Latitude is refreshed by the daily workflow below. Future collection can be manual or your own script, without Instinct.
 
 ## Files and sources
 
@@ -33,6 +33,12 @@ No earlier Claude history was supplied, so a price change cannot be established 
 
 Sources: https://www.latitude.sh/pricing , https://openrouter.ai/rankings , https://ramp.com/data/ai-index . OpenRouter rankings data is CC BY 4.0: https://creativecommons.org/licenses/by/4.0/ .
 
-## Read-only collector trial
+## Daily Latitude auto-update
 
-Actions > Latitude collector trial > Run workflow launches Chromium and reads the three public billing views. It also runs daily at 21:17 UTC. Output JSON and screenshots are kept as the `latitude-trial` artifact for 7 days. The workflow has read-only permissions and never changes `snapshots.json` or the dashboard. It is a collection/access test, not a full automatic refresh: location details, schema mapping, and validation still need adding. The first GitHub-runner test returned HTTP 200 and matched the baseline GPU prices; future access is not guaranteed.
+Actions > Latitude daily update > Run workflow runs `collect_latitude.py`, rebuilds the workbook, commits only `snapshots.json` and `workbook.b64`, then deploys Pages. It runs daily at 21:17 UTC. GitHub schedules can start late. No VM or paid service is used by this workflow.
+
+The collector reads Hourly, Monthly and Paid yearly prices directly, plus every metal server's location and stock tables. It does not derive missing prices. It rejects failed pages, missing/duplicate plans, incomplete terms, invalid prices, changed plan/hardware/location sets, or any price move over 50% from the previous snapshot. Rejected collections stop before publication, leaving the last good data live. A legitimate large change or new plan needs manual review and a baseline update before automation resumes. Source changes can still defeat a scraper; review failures in Actions.
+
+One Sydney-calendar-date key is written per day. Same-day runs replace only that day's entry; older dates are kept. OpenRouter and Ramp are not scraped by this workflow yet: their verified figures and original source periods are carried forward and shown on the dashboard. Do not treat a new Latitude capture date as fresh AI-demand collection. VM stock/location data is still unverified.
+
+Collection JSON and an overview screenshot are kept in the `latitude-collection` artifact for 7 days. The workflow's collection job has repository contents write permission to commit these data files; its deployment job has Pages deployment permission. It uses only the standard GitHub token, with no stored personal secrets. `Publish dashboard changes` separately redeploys manual edits to the three public assets.
