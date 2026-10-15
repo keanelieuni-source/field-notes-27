@@ -292,4 +292,4 @@ $('checkBtn').onclick=load;
 $('dlBtn').onclick=async()=>{try{const r=await fetch('workbook.b64',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const raw=atob((await r.text()).trim()),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0)),u=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));const a=document.createElement('a');a.href=u;a.download='compute-pricing-monitor.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(u),60000);toast('Excel history downloaded.')}catch(e){toast('Download failed: '+e.message)}};
 load();
 })();
-</script><script src="comparison.js"></script></body></html>
+</script><script src="comparison.js?v=monthly-ticks-20261016b"></script></body></html>
