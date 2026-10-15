@@ -1,0 +1,27 @@
+name: Latitude collector trial
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 21 * * *'
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Capture native Latitude billing views
+        run: python latitude_trial.py
+      - name: Keep raw output and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: latitude-trial
+          path: trial-output/
+          retention-days: 7
