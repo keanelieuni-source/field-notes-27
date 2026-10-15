@@ -102,7 +102,13 @@ rows["Read me"] = [{"note": x} for x in ["Latitude prices are per whole server; 
 comparison_path=ROOT/'comparison_data.json'
 if comparison_path.exists():
     comp=json.loads(comparison_path.read_text())
-    rows['SemiAnalysis CSV']=[{'Date':p['date'],'A100 USD/GPU-hr':p['a100'],'H100 USD/GPU-hr':p['h100'],'B200 USD/GPU-hr':p['b200'],'Source':'User-supplied SemiAnalysis CSV; missing observations blank'}for p in comp['semiAnalysis']]
+    rows['SemiAnalysis CSV']=[{'Date':p['date'],'A100 USD/GPU-hr':p['a100'],'H100 USD/GPU-hr':p['h100'],'B200 USD/GPU-hr':p['b200'],'Source':'https://gpu-index.semianalysis.com/api/public-data'}for p in comp['semiAnalysis']]
+    rows['SemiAnalysis contracts']=[]
+    for block in comp.get('semiContracts',[]):
+        for point in block['data']:
+            for term in ['1y','onDemand']:
+                values=point.get(term);sold=point['period'] in block.get('soldOutPeriods',{}).get(term,[])
+                rows['SemiAnalysis contracts'].append({'SKU':block['sku'],'Period':point['period'],'Period start':__import__('email.utils',fromlist=['parsedate_to_datetime']).parsedate_to_datetime(point['period_start']).date().isoformat(),'Source term':term,'Meaning':'1-year contracted rental' if term=='1y' else 'On-demand rental','P25 USD/GPU-hr':values[0] if values else None,'P75 USD/GPU-hr':values[1] if values else None,'Availability':'Sold out' if sold else 'Range supplied' if values else 'Not supplied','Source note':block.get('note'),'Source':'https://gpu-index.semianalysis.com/api/public-data'})
     rows['GPU aggregate history']=[{'Week start':p['date'],'GPU':a['gpu'],'Series':a['name'],'Origin':a['kind'],'Median USD/GPU-hr':p.get('median'),'Cheapest USD/GPU-hr':p.get('cheapest'),'Providers':p.get('providers'),'Vintage':p.get('vintage'),'Source':a['source']}for a in comp['aggregates']for p in a['points']]
     rows['Seller observations']=[{'Date':p['date'],'GPU':q['gpu'],'Seller':q['provider'],'Instance':q.get('instance'),'Region':q.get('region'),'Observed USD/GPU-hr':p['value'],'Original node USD/hr':q.get('node_usd_hr') if p['date']==q.get('read_date') else p.get('originalNodePrice'),'GPU count':q.get('gpu_count') or p.get('gpuCount'),'Observation origin':p['origin'],'Verification':q['verification'],'Source':q['source_url']}for q in comp['sellerObservations']for p in q['points']]
     semi={p['date']:p for p in comp['semiAnalysis']};rows['Semi vs Latitude']=[]
@@ -136,7 +142,7 @@ for idx,name in enumerate(order):
     for c in ws[1]:
         c.font=Font(name='Calibri',size=11,bold=True,color='FFFFFF');c.fill=PatternFill('solid',fgColor='344A44');c.alignment=Alignment(wrap_text=True,vertical='center')
     for row in ws.iter_rows(min_row=2):
-        ws.row_dimensions[row[0].row].height=80 if name in ['Semi vs Latitude','Seller observations'] else 36 if name!='Read me' else 60
+        ws.row_dimensions[row[0].row].height=80 if name in ['Semi vs Latitude','Seller observations','SemiAnalysis contracts'] else 36 if name!='Read me' else 60
         for c in row:
             c.font=Font(name='Calibri',size=11,color='251F21');c.fill=PatternFill('solid',fgColor='F3F7F5' if c.row%2==0 else 'FFFFFF');c.alignment=Alignment(vertical='center',wrap_text=True)
             if isinstance(c.value,(int,float)) and not isinstance(c.value,bool):c.number_format='#,##0.00;[Red]-#,##0.00' if 'usd' in str(ws.cell(1,c.column).value).lower() or any(x in headers[c.column-1].lower() for x in ['hourly','monthly','annual']) else '#,##0.####'
