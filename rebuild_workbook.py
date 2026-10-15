@@ -98,13 +98,21 @@ for day, snap in sorted(data["snapshots"].items()):
         for l in p["locations"]:
             rows["GPU stock and prices"].append({"Date": day, "Plan": p["id"], "Location": l["location"], "Stock": "In stock" if l["status"] == "CURRENTLY IN STOCK" else "Out of stock", "Hourly USD/hr": l["hourly"], "Hourly USD/mo": l["monthly"], "Monthly USD/hr": l["reservedMonthlyHourly"], "Monthly USD/mo": l["reservedMonthlyMonthly"], "Yearly USD/hr": l["reservedYearlyHourly"], "Yearly USD/year": l["reservedYearlyAnnual"], "Source": p["source"]})
 rows["Read me"] = [{"note": x} for x in ["Latitude prices are per whole server; GPU Economy retains its original quoted unit. Annual totals remain annual. Missing values are blank, never zero.", "Source dates can differ from snapshot dates. Compare at least two dates before claiming a change.", "Latitude includes out-of-stock offers. VM location availability was not verified.", "Ramp token-spend volume is indexed spend, not raw tokens or USD.", "OpenRouter rankings: CC BY 4.0. https://openrouter.ai/rankings", "Price eras: unchanged durations start at the first consecutive observation, not an assumed earlier change. Latitude and competitor eras are separate. Market moves reset at each observed Latitude hourly price change. Missing or failed daily captures break comparability.", "GPU Economy: CC BY 4.0. https://gpueconomy.com/data . Original units/totals and source links retained; no per-GPU normalization performed. Comparisons between observations require consecutive dates, fresh successful feeds and unchanged quote identity/method. Exact GPU variant and server inclusions remain unverified; no like-for-like spread."]]
+# Comparison layers are built from stored observations, never fetched here.
+comparison_path=ROOT/'comparison_data.json'
+if comparison_path.exists():
+    comp=json.loads(comparison_path.read_text())
+    if comp.get('semiAnalysis'):
+        rows['SemiAnalysis CSV']=[{'Date':p['date'],'A100 USD/GPU-hr':p['a100'],'H100 USD/GPU-hr':p['h100'],'B200 USD/GPU-hr':p['b200'],'Source':'User-supplied SemiAnalysis CSV; missing observations blank'}for p in comp['semiAnalysis']]
+    rows['GPU aggregate history']=[{'Week start':p['date'],'GPU':a['gpu'],'Series':a['name'],'Origin':a['kind'],'Median USD/GPU-hr':p.get('median'),'Cheapest USD/GPU-hr':p.get('cheapest'),'Providers':p.get('providers'),'Vintage':p.get('vintage'),'Source':a['source']}for a in comp['aggregates']for p in a['points']]
+    rows['Seller observations']=[{'Date':p['date'],'GPU':q['gpu'],'Seller':q['provider'],'Instance':q.get('instance'),'Region':q.get('region'),'Observed USD/GPU-hr':p['value'],'Original node USD/hr':q.get('node_usd_hr') if p['date']==q.get('read_date') else p.get('originalNodePrice'),'GPU count':q.get('gpu_count') or p.get('gpuCount'),'Observation origin':p['origin'],'Verification':q['verification'],'Source':q['source_url']}for q in comp['sellerObservations']for p in q['points']]
 # Readable headers, units, stock colors and filters are rebuilt every day.
 from openpyxl.styles import Alignment
 from openpyxl.formatting.rule import CellIsRule
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.utils import get_column_letter
-order = ["Read me", "GPU stock and prices", "Latitude price eras", "Competitor price eras", "Market since Latitude"] + [n for n in rows if n not in ["Read me", "GPU stock and prices", "Latitude price eras", "Competitor price eras", "Market since Latitude"]]
-labels = {"snapshotDate":"Snapshot date", "billingTerm":"Latitude term", "originalUnit":"Original quote unit", "hourly":"Hourly USD/hr", "monthly":"Hourly USD/mo", "reservedMonthlyHourly":"Monthly USD/hr", "reservedMonthlyMonthly":"Monthly USD/mo", "reservedYearlyHourly":"Yearly USD/hr", "reservedYearlyAnnual":"Yearly USD/year", "observedUnchangedDays":"Observed unchanged days", "lastPriceChangeDate":"Last observed change date", "lastObservedChangeDate":"Last observed change date", "quoteMoveSinceLatitudeUsdHourly":"Market move USD/hr", "originalQuoteHourly":"Quote USD/hr", "currentUsdHourly":"Current USD/hr", "previousUsdHourly":"Previous USD/hr", "changeUsdHourly":"Change USD/hr", "quotePreviousObservedUsdHourly":"Quote from USD/hr", "quoteCurrentObservedUsdHourly":"Quote to USD/hr", "latitudePreviousObservedUsdHourly":"Latitude from USD/hr", "latitudeCurrentObservedUsdHourly":"Latitude to USD/hr"}
+order = ["Read me", "Semi vs Latitude", "SemiAnalysis CSV", "GPU aggregate history", "Seller observations", "GPU stock and prices", "Latitude price eras", "Competitor price eras", "Market since Latitude"] + [n for n in rows if n not in ["Read me", "Semi vs Latitude", "SemiAnalysis CSV", "GPU aggregate history", "Seller observations", "GPU stock and prices", "Latitude price eras", "Competitor price eras", "Market since Latitude"]]
+labels = {"Latitude whole plan USD/hr":"Latitude whole plan\nUSD/hr","Latitude derived USD/GPU-hr":"Latitude derived\nUSD/GPU-hr","SemiAnalysis H100 USD/GPU-hr":"SemiAnalysis H100\nUSD/GPU-hr","Level difference USD/GPU-hr":"Level difference\nUSD/GPU-hr","Percent vs SemiAnalysis":"Percent vs SemiAnalysis","Original node USD/hr":"Original node\nUSD/hr","Observed USD/GPU-hr":"Observed\nUSD/GPU-hr","A100 USD/GPU-hr":"A100 USD/GPU-hr","H100 USD/GPU-hr":"H100 USD/GPU-hr","B200 USD/GPU-hr":"B200 USD/GPU-hr","snapshotDate":"Snapshot date", "billingTerm":"Latitude term", "originalUnit":"Original quote unit", "hourly":"Hourly USD/hr", "monthly":"Hourly USD/mo", "reservedMonthlyHourly":"Monthly USD/hr", "reservedMonthlyMonthly":"Monthly USD/mo", "reservedYearlyHourly":"Yearly USD/hr", "reservedYearlyAnnual":"Yearly USD/year", "observedUnchangedDays":"Observed unchanged days", "lastPriceChangeDate":"Last observed change date", "lastObservedChangeDate":"Last observed change date", "quoteMoveSinceLatitudeUsdHourly":"Market move USD/hr", "originalQuoteHourly":"Quote USD/hr", "currentUsdHourly":"Current USD/hr", "previousUsdHourly":"Previous USD/hr", "changeUsdHourly":"Change USD/hr", "quotePreviousObservedUsdHourly":"Quote from USD/hr", "quoteCurrentObservedUsdHourly":"Quote to USD/hr", "latitudePreviousObservedUsdHourly":"Latitude from USD/hr", "latitudeCurrentObservedUsdHourly":"Latitude to USD/hr"}
 for idx,name in enumerate(order):
     records=rows[name];ws=wb.create_sheet(name)
     if not records: continue
@@ -118,20 +126,21 @@ for idx,name in enumerate(order):
     ws.page_setup.orientation='landscape';ws.page_setup.paperSize=ws.PAPERSIZE_A3;ws.page_setup.fitToWidth=1;ws.page_setup.fitToHeight=0
     ws.print_title_rows='1:1';ws.print_options.horizontalCentered=True
     ws.sheet_properties.tabColor='73A89A' if idx<5 else '585254'
-    ws.row_dimensions[1].height=42
+    ws.row_dimensions[1].height=72
     for c in ws[1]:
         c.font=Font(name='Calibri',size=11,bold=True,color='FFFFFF');c.fill=PatternFill('solid',fgColor='344A44');c.alignment=Alignment(wrap_text=True,vertical='center')
     for row in ws.iter_rows(min_row=2):
-        ws.row_dimensions[row[0].row].height=36 if name!='Read me' else 60
+        ws.row_dimensions[row[0].row].height=80 if name in ['Semi vs Latitude','Seller observations'] else 36 if name!='Read me' else 60
         for c in row:
             c.font=Font(name='Calibri',size=11,color='251F21');c.fill=PatternFill('solid',fgColor='F3F7F5' if c.row%2==0 else 'FFFFFF');c.alignment=Alignment(vertical='center',wrap_text=True)
             if isinstance(c.value,(int,float)) and not isinstance(c.value,bool):c.number_format='#,##0.00;[Red]-#,##0.00' if 'usd' in str(ws.cell(1,c.column).value).lower() or any(x in headers[c.column-1].lower() for x in ['hourly','monthly','annual']) else '#,##0.####'
             if isinstance(c.value,str) and c.value.startswith('https://'):c.hyperlink=c.value;c.value='Source';c.font=Font(name='Calibri',size=10,color='276F5F',underline='single')
+            if str(ws.cell(1,c.column).value).lower().startswith('percent'):c.number_format='0.00'
             if c.value in ('In stock','CURRENTLY IN STOCK'):c.font=Font(name='Calibri',size=11,color='276F5F',bold=True)
             if c.value in ('Out of stock','OUT OF STOCK'):c.font=Font(name='Calibri',size=11,color='A33A35',bold=True)
     for j,k in enumerate(headers,1):
         width=20 if any(x in k.lower() for x in ['hourly','usd','monthly','annual']) else 24
-        if k in ['note','comparison','status','basis']:width=52
+        if k in ['note','comparison','status','basis','Caveat','Verification','Overlap status']:width=52
         if k in ['source','source_url','quoteKey']:width=36
         if name=='Read me':width=115
         ws.column_dimensions[get_column_letter(j)].width=width
