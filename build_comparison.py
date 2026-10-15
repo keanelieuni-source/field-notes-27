@@ -15,7 +15,7 @@ def build():
                 if v is not None and (not math.isfinite(v) or v<0):raise ValueError('Invalid index price')
                 p[gpu]=v
             rows.append(p)
-    out['semiAnalysis']=sorted(rows,key=lambda p:p['date']);out['latitude']=[]
+    out['semiAnalysis']=sorted(rows,key=lambda p:p['date']);out['semiContracts']=json.loads((ROOT/'semi_contract_data.json').read_text()) if (ROOT/'semi_contract_data.json').exists() else [];out['latitude']=[]
     snapshots=json.loads((ROOT/'snapshots.json').read_text())['snapshots']
     from collections import defaultdict
     sellers={q['key']:q for q in out['sellerObservations']};groups=defaultdict(list)
