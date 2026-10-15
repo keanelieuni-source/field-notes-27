@@ -1,6 +1,8 @@
 import importlib.util, json,tempfile,copy,hashlib
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('collector',str(Path(__file__).resolve().parent/'collect_latitude.py'));m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+import collect_demand
+collect_demand.collect=lambda o,r,now:(copy.deepcopy(o),copy.deepcopy(r))
 original=json.load(open(Path(__file__).resolve().parent/'snapshots.json'));base=next(iter(original['snapshots'].values()))
 for kind in ['missing-plan','missing-value','huge-price','hardware','location']:
  with tempfile.TemporaryDirectory() as td:
