@@ -150,7 +150,7 @@ button,summary{min-height:44px}summary{padding:8px 0}.model-row{display:flex;jus
   <footer>
     <p>The page loads the latest published snapshot when opened. Reload published data reads the stored JSON again; it does not collect from source sites. Earlier dates remain in the history.</p>
     <p id="basisNote"></p>
-    <p>OpenRouter rankings data is licensed CC BY 4.0. Ramp figures come from Ramp AI Index charts and chart data. OpenRouter and Ramp are retained at their shown source periods; the daily update currently refreshes Latitude only.</p>
+    <p>OpenRouter rankings data is licensed CC BY 4.0. Ramp figures come from Ramp AI Index charts and chart data. Latitude, OpenRouter and Ramp are checked daily. Source periods stay visible: a daily check does not mean a new monthly or weekly release.</p>
   </footer>
 </main>
 
@@ -215,7 +215,7 @@ button,summary{min-height:44px}summary{padding:8px 0}.model-row{display:flex;jus
 
   function renderDemand(){
     var o=(latest()||{}).openrouter||{};
-    $("orNote").textContent=o.marketShareWeekOf?"Week beginning "+o.marketShareWeekOf+", with change in requests versus the week before.":"";
+    $("orNote").textContent=o.marketShareWeekOf?"Week beginning "+o.marketShareWeekOf+", with change in requests versus the week before. Checked "+fmtDate(o.checkedAt||o.capturedAt)+".":"";
     var sh=(o.marketShare||[]).filter(function(m){return !/other/i.test(m.author)}).slice(0,6);
     if(!sh.length){$("orShare").innerHTML='<li class="muted">Not stored yet.</li>'}
     else{var mx=Math.max.apply(null,sh.map(function(m){return m.share}));
@@ -226,7 +226,7 @@ button,summary{min-height:44px}summary{padding:8px 0}.model-row{display:flex;jus
     var r=(latest()||{}).ramp;
     if(!r){$("rampKv").innerHTML='<span class="muted">Not stored yet.</span>';$("rampNote").textContent="";$("rampTake").textContent="";return}
     var a=r.adoption||{};
-    $("rampNote").textContent="Share of businesses on Ramp, "+(r.periodLabel||r.period)+".";
+    $("rampNote").textContent="Share of businesses on Ramp, "+(r.periodLabel||r.period)+". Checked "+fmtDate(r.checkedAt||r.capturedAt)+"; monthly adoption/spend, weekly indexed maker spend.";
     function kv(k,v,d){return '<span>'+esc(k)+'</span><span class="v">'+esc(v)+'</span>'+(d?'<span class="d">'+esc(d)+'</span>':'')}
     $("rampKv").innerHTML=kv("Any AI",a.overall+"%","+"+a.overallChange+" pp/mo")+kv("Anthropic",a.anthropic+"%","+"+a.anthropicChange+" pp/mo")+kv("OpenAI",a.openai+"%","+"+a.openaiChange+" pp/mo")+
       (r.top1SpendPerEmployee!=null?kv("AI spend per employee, top 1% of firms","$"+r.top1SpendPerEmployee.toLocaleString("en-US")+"/mo","Median for top 1% of Ramp firms"):"");
