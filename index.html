@@ -1,4 +1,14 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Compute pricing monitor</title><style>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Compute pricing monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
 :root{
   --bg:#F1F3EF; --surface:#FBFCFA; --ink:#16202B; --muted:#5B6570; --rule:#D6DAD3;
   --accent:#2B45C4; --up:#AD3B25; --down:#1D7658;
@@ -75,15 +85,177 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--rule);font-si
 footer p{max-width:75ch;margin-bottom:6px}
 @media (max-width:560px){main{padding:28px 16px 48px}}
 
-.cards{display:grid;gap:16px}.plan{padding:18px;background:var(--surface);border:1px solid var(--rule);border-radius:10px}.terms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.terms strong,.terms small{display:block}.terms strong{font-size:20px}.terms small,.note{color:var(--muted)}.plan h3{margin:0 0 6px}.location{border-top:1px solid var(--rule);padding:12px 0}.location-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.plan details{margin-top:12px}.plan summary{min-height:44px;display:flex;align-items:center}.button{display:inline-flex;padding:10px 14px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);border-radius:6px;text-decoration:none;min-height:44px;align-items:center}.model{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--rule);padding:12px 0}.model small{display:block;color:var(--muted)}.grid2>*{min-width:0}h3{margin:0 0 10px}button,summary{min-height:44px}#error{padding:20px;color:var(--up)}@media(max-width:700px){.grid2{grid-template-columns:1fr}.terms{grid-template-columns:1fr}.terms>div{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;border-top:1px solid var(--rule);padding:8px 0}.terms label{grid-row:span 2}.terms small{grid-column:2}.location-grid{grid-template-columns:1fr}.model{flex-wrap:wrap}}body{overflow-wrap:break-word}
-</style></head><body><main><header><div><h1>Compute pricing monitor</h1><p id="status" class="status">Loading snapshot...</p></div><div class="actions"><a class="button" id="excel" href="#" download="compute-pricing-monitor.xlsx">Download Excel history</a><button id="reload">Reload published data</button></div></header><div id="error" hidden></div><div id="content"></div><footer><p>Opening or reloading loads the newest published snapshot. Collecting new source data and publishing it is a separate step, not a live scrape. One snapshot per date; same-day refresh replaces that date and preserves earlier days.</p><p>OpenRouter rankings data by OpenRouter is licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. Ramp values are from Ramp AI Index charts and chart data. All prices are USD per whole server, never per GPU.</p></footer></main><script>
+button,summary{min-height:44px}summary{padding:8px 0}.model-row{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--rule)}.model-row small{display:block;color:var(--muted)}.model-row>span:last-child{text-align:right}.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.panel{min-width:0}.kv .v{white-space:normal}.kv{grid-template-columns:minmax(0,1fr) minmax(0,auto)}
+@media(max-width:650px){.grid2{grid-template-columns:1fr}#gpuTable,#allTable{min-width:0}table,tbody,tr,td{display:block;width:100%}thead{display:none}tr{padding:12px 14px;border-bottom:1px solid var(--rule)}td{padding:8px 0;border:0}.num{white-space:normal;text-align:right}td[data-label]{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 12px}td[data-label]::before{content:attr(data-label);text-align:left;color:var(--muted);font-size:13px;font-weight:400}td[data-label]>.sub{grid-column:2}.tbl-wrap{overflow:visible}.bars .val{white-space:normal}.model-row{font-size:14px}.model-row>span{min-width:0}.panel{padding:14px}.actions{width:100%}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Compute pricing monitor</h1>
+      <p class="status" id="status">Loading stored data…</p>
+    </div>
+    <div>
+      <div class="actions">
+        <button id="checkBtn" type="button">Reload published data</button>
+        <button id="dlBtn" type="button" class="primary">Download spreadsheet</button>
+      </div>
+      <p class="toast" id="toast" role="status" aria-live="polite"></p>
+    </div>
+  </header>
 
-const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])), money=n=>n==null?'Not shown':new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(n), link=(url,text)=>`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(text)}</a>`;
-function plan(p){return `<article class="plan"><h3>${esc(p.id)}</h3><p class="note">${esc(p.category)} · ${esc(p.hardware)} · ${esc(p.memory)}</p><div class="terms"><div><label>Hourly billing</label><strong>${money(p.hourly)}/hr</strong><small>${p.monthly==null?'Monthly equivalent not shown':money(p.monthly)+'/mo'}</small></div><div><label>Monthly commitment</label><strong>${money(p.reservedMonthlyHourly)}/hr</strong><small>${money(p.reservedMonthlyMonthly)}/mo</small></div><div><label>Paid yearly</label><strong>${money(p.reservedYearlyHourly)}/hr</strong><small>${money(p.reservedYearlyAnnual)}/year</small></div></div><p>${esc(p.availability)}</p>${p.locations.length?`<details><summary>Locations and availability</summary><p class="note">Hourly range: ${money(p.locationHourlyMin)} to ${money(p.locationHourlyMax)}/hr. Lowest: ${esc(p.cheapestLocations.join(', '))}. Highest: ${esc(p.mostExpensiveLocations.join(', '))}. Includes out-of-stock offers.</p><div class="location-grid">${p.locations.map(l=>`<div class="location"><strong>${esc(l.location)}</strong><p>${l.status==='CURRENTLY IN STOCK'?'In stock':'Out of stock'}</p><p>Hourly: ${money(l.hourly)}/hr · ${money(l.monthly)}/mo<br>Monthly: ${money(l.reservedMonthlyHourly)}/hr · ${money(l.reservedMonthlyMonthly)}/mo<br>Yearly: ${money(l.reservedYearlyHourly)}/hr · ${money(l.reservedYearlyAnnual)}/year</p></div>`).join('')}</div></details>`:''}<p>${link(p.source,'Latitude source')}</p></article>`}
+  <section aria-labelledby="gpu-h">
+    <div class="sec-head">
+      <h2 id="gpu-h">GPU rental prices at Latitude.sh</h2>
+      <a href="https://www.latitude.sh/pricing" target="_blank" rel="noopener">Source</a>
+    </div>
+    <p class="lede" id="gpuLede">Price per plan, by billing commitment.</p>
+    <div class="tbl-wrap"><table id="gpuTable">
+      <thead><tr><th>Plan</th><th class="num">Hourly billing<br><span class="small">per plan</span></th><th class="num">Monthly plan<br><span class="small">per plan</span></th><th class="num">Paid yearly<br><span class="small">per plan</span></th><th class="num">Hourly change</th></tr></thead>
+      <tbody></tbody></table></div>
+  </section>
+
+  <section aria-labelledby="chg-h">
+    <div class="sec-head"><h2 id="chg-h">What changed</h2></div>
+    <div id="changes"></div>
+  </section>
+
+  <section aria-labelledby="ai-h">
+    <div class="sec-head"><h2 id="ai-h">AI demand</h2></div>
+    <div class="grid2">
+      <div class="panel">
+        <div class="sec-head"><h3>OpenRouter share of requests by model maker</h3><a href="https://openrouter.ai/rankings" target="_blank" rel="noopener">Source</a></div>
+        <p class="muted small" id="orNote"></p>
+        <ul class="bars" id="orShare"></ul>
+        <p class="foot" id="orTop"></p>
+      </div>
+      <div class="panel">
+        <div class="sec-head"><h3>Ramp: US businesses paying for AI</h3><a href="https://ramp.com/data/ai-index" target="_blank" rel="noopener">Source</a></div>
+        <p class="muted small" id="rampNote"></p>
+        <div class="kv" id="rampKv"></div>
+        <p class="foot" id="rampTake"></p>
+      </div>
+    </div>
+  </section>
+
+  <div id="extras"></div>
+  <details>
+    <summary id="allSummary">All Latitude.sh plans, including CPU servers and VMs</summary>
+    <div class="tbl-wrap"><table id="allTable">
+      <thead><tr><th>Plan</th><th>Hardware</th><th class="num">Hourly billing</th><th class="num">Monthly plan</th><th class="num">Paid yearly, annual</th><th class="num">Hourly change</th></tr></thead>
+      <tbody></tbody></table></div>
+  </details>
+
+  <footer>
+    <p>The page loads the latest published snapshot when opened. Reload published data reads the stored JSON again; it does not collect from source sites. Earlier dates remain in the history.</p>
+    <p id="basisNote"></p>
+    <p>OpenRouter rankings data is licensed CC BY 4.0. Ramp figures come from Ramp AI Index charts and chart data. Source periods can differ from the capture date.</p>
+  </footer>
+</main>
+
+<script>
+(function(){
+  var state={snaps:[],db:null,dl:null,loading:true};
+  var $=function(id){return document.getElementById(id)};
+  function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  function usd(n,dp){if(n==null||isNaN(n))return "–";if(dp!=null)return "$"+n.toLocaleString("en-US",{minimumFractionDigits:dp,maximumFractionDigits:dp});return "$"+(n>=100?Math.round(n).toLocaleString("en-US"):n.toFixed(2))}
+  function fmtDate(iso){var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso||""));if(!m)return String(iso||"");return +m[3]+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m[2]-1]+" "+m[1]}
+  function toast(m){$("toast").textContent=m||""}
+  function latest(){return state.snaps[state.snaps.length-1]}
+  function previous(){return state.snaps.length>1?state.snaps[state.snaps.length-2]:null}
+  function plansOf(s){return (s&&s.latitude&&s.latitude.plans)||[]}
+  function planMap(s){var m={};plansOf(s).forEach(function(p){m[p.id]=p});return m}
+  function disc(){var s=latest();return (s&&s.latitude&&s.latitude.discounts)||{monthly:0.5,yearly:0.65}}
+  function effHour(p,t){return t==="monthly"?p.reservedMonthlyHourly:t==="yearly"?p.reservedYearlyHourly:p.hourly}
+  function effMonth(p,t){return t==="monthly"?p.reservedMonthlyMonthly:t==="yearly"?p.reservedYearlyAnnual:p.monthly}
+  function gpuCount(p){var m=/^(\d+)\s*[×x]/.exec(p.hardware||"");return m?+m[1]:1}
+  function gpuName(p){return (p.hardware||"").replace(/^\d+\s*[×x]\s*/,"").replace(/^NVIDIA\s+(HGX\s+)?/,"")}
+  function pct(a,b){return (b-a)/a*100}
+  function chgCell(prevP,p){
+    if(!previous())return '<span class="muted">–</span>';
+    if(!prevP)return '<span class="muted">New</span>';
+    if(prevP.hourly===p.hourly)return '<span class="muted">No change</span>';
+    var c=pct(prevP.hourly,p.hourly);return '<span class="'+(c>0?"up":"down")+'">'+(c>0?"+":"")+c.toFixed(1)+'%</span>';
+  }
+
+  function renderStatus(){
+    var s=latest();
+    if(!s){$("status").textContent=state.loading?"Loading stored data…":state.db?"No snapshots stored yet. Ask Claude to refresh the compute pricing monitor.":"No verified snapshot loaded.";return}
+    var n=state.snaps.length;
+    $("status").textContent="Data as of "+fmtDate(s.capturedAt)+". "+n+(n===1?" snapshot":" snapshots")+" stored.";
+  }
+
+  function renderGpu(){
+    var tb=$("gpuTable").querySelector("tbody"),prev=planMap(previous());
+    var gpus=plansOf(latest()).filter(function(p){return p.category==="Metal GPU"}).sort(function(a,b){return a.hourly-b.hourly});
+    if(!gpus.length){tb.innerHTML='<tr><td colspan="5" class="muted">No GPU prices stored yet.</td></tr>';return}
+    tb.innerHTML=gpus.map(function(p){
+      var n=gpuCount(p);
+      function cell(t){return '<td class="num price" data-label="'+({hourly:'Hourly billing',monthly:'Monthly plan',yearly:'Paid yearly'})[t]+'">'+usd(effHour(p,t),2)+'/hr<span class="sub">'+usd(effMonth(p,t))+(t==='yearly'?'/year':'/mo')+'</span></td>'}
+      return '<tr><td><strong>'+esc(p.id)+'</strong><span class="sub muted small" style="display:block">'+n+'× '+esc(gpuName(p))+'</span></td>'+cell("hourly")+cell("monthly")+cell("yearly")+'<td class="num" data-label="Hourly change">'+chgCell(prev[p.id],p)+'</td></tr>';
+    }).join("");
+  }
+
+  function renderChanges(){
+    var el=$("changes"),s=latest(),p=previous();
+    if(!s){el.innerHTML="";return}
+    if(!p){el.innerHTML='<div class="empty">Changes appear here after the next refresh, compared with the snapshot from '+esc(fmtDate(s.capturedAt))+'.</div>';return}
+    var a=planMap(p),b=planMap(s),rows=[];
+    Object.keys(b).forEach(function(id){
+      if(!a[id])rows.push({id:id,t:"New plan at "+usd(b[id].hourly)+" per hour",c:""});
+      else if(a[id].hourly!==b[id].hourly){var c=pct(a[id].hourly,b[id].hourly);rows.push({id:id,t:(c>0?"Up ":"Down ")+Math.abs(c).toFixed(1)+"% to "+usd(b[id].hourly)+" per hour (was "+usd(a[id].hourly)+")",c:c>0?"up":"down"})}
+    });
+    Object.keys(a).forEach(function(id){if(!b[id])rows.push({id:id,t:"No longer listed (was "+usd(a[id].hourly)+" per hour)",c:""})});
+    var dsc=(s.latitude||{}).discounts,dpc=(p.latitude||{}).discounts;
+    if(dsc&&dpc&&(dsc.monthly!==dpc.monthly||dsc.yearly!==dpc.yearly))rows.push({id:"Reserved discounts",t:"Monthly "+Math.round(dpc.monthly*100)+"% to "+Math.round(dsc.monthly*100)+"%, yearly "+Math.round(dpc.yearly*100)+"% to "+Math.round(dsc.yearly*100)+"%",c:""});
+    if(!rows.length){el.innerHTML='<div class="empty">No Latitude.sh price changes since '+esc(fmtDate(p.capturedAt))+'.</div>';return}
+    el.innerHTML='<div class="tbl-wrap"><table><tbody>'+rows.map(function(r){return '<tr><td>'+esc(r.id)+'</td><td class="'+r.c+'">'+esc(r.t)+'</td></tr>'}).join("")+'</tbody></table></div>';
+  }
+
+  function renderDemand(){
+    var o=(latest()||{}).openrouter||{};
+    $("orNote").textContent=o.marketShareWeekOf?"Week beginning "+o.marketShareWeekOf+", with change in requests versus the week before.":"";
+    var sh=(o.marketShare||[]).filter(function(m){return !/other/i.test(m.author)}).slice(0,6);
+    if(!sh.length){$("orShare").innerHTML='<li class="muted">Not stored yet.</li>'}
+    else{var mx=Math.max.apply(null,sh.map(function(m){return m.share}));
+      $("orShare").innerHTML=sh.map(function(m){var cls=/^\+/.test(m.change)?"up":/^-/.test(m.change)?"down":"muted";
+        return '<li><span>'+esc(m.author)+'</span><span class="val">'+m.share+'% <span class="small '+cls+'">'+esc(m.change||"")+'</span></span><div class="track"><div class="fill" style="width:'+(m.share/mx*100).toFixed(1)+'%"></div></div></li>'}).join("")}
+    var t=(o.weekTopModels||[])[0];
+    $("orTop").textContent=t?"Most-used model over the last 7 days: "+t.model+" ("+t.author+"), "+t.tokensT+" trillion tokens.":"";
+    var r=(latest()||{}).ramp;
+    if(!r){$("rampKv").innerHTML='<span class="muted">Not stored yet.</span>';$("rampNote").textContent="";$("rampTake").textContent="";return}
+    var a=r.adoption||{};
+    $("rampNote").textContent="Share of businesses on Ramp, "+(r.periodLabel||r.period)+".";
+    function kv(k,v,d){return '<span>'+esc(k)+'</span><span class="v">'+esc(v)+'</span>'+(d?'<span class="d">'+esc(d)+'</span>':'')}
+    $("rampKv").innerHTML=kv("Any AI",a.overall+"%","+"+a.overallChange+" pp/mo")+kv("Anthropic",a.anthropic+"%","+"+a.anthropicChange+" pp/mo")+kv("OpenAI",a.openai+"%","+"+a.openaiChange+" pp/mo")+
+      (r.top1SpendPerEmployee!=null?kv("AI spend per employee, top 1% of firms","$"+r.top1SpendPerEmployee.toLocaleString("en-US")+"/mo","Median for top 1% of Ramp firms"):"");
+    $("rampTake").textContent=(r.notes||[])[0]||"";
+  }
+
+  function renderAll(){
+    var tb=$("allTable").querySelector("tbody"),prev=planMap(previous()),ps=plansOf(latest()).slice();
+    var order=["Metal GPU","Metal Gen 4","Metal Gen 3","Virtual machines"];
+    ps.sort(function(a,b){return order.indexOf(a.category)-order.indexOf(b.category)||b.hourly-a.hourly});
+    $("allSummary").textContent="All Latitude.sh plans, including CPU servers and VMs"+(ps.length?" ("+ps.length+")":"");
+    tb.innerHTML=ps.length?ps.map(function(p){return '<tr><td>'+esc(p.id)+'<span class="muted small" style="display:block">'+esc(p.category)+'</span></td><td>'+esc(p.hardware)+(p.memory?'<span class="muted small" style="display:block">'+esc(p.memory)+'</span>':'')+'</td><td class="num">'+usd(p.monthly)+'<span class="muted small" style="display:block">'+usd(p.hourly)+'/hr</span></td><td class="num">'+usd(effMonth(p,"monthly"))+'</td><td class="num">'+usd(effMonth(p,"yearly"))+'</td><td class="num">'+chgCell(prev[p.id],p)+'</td></tr>'}).join(""):'<tr><td colspan="6" class="muted">No plans stored yet.</td></tr>';
+    var s=latest();$("basisNote").textContent=(s&&s.latitude&&s.latitude.reservedNote)||"";
+    $("gpuLede").textContent="USD per whole server plan. Each billing term read directly. Paid yearly totals are annual, not monthly.";
+  }
+
+  function render(){renderStatus();renderGpu();$("changes").innerHTML=changes(latest(),previous());renderDemand();renderAll();renderExtras();labelTables()}
+
 function changes(s,p){if(!p)return '<div class="empty">First snapshot. No earlier Claude database was supplied, so no price move or discount change can be established yet.</div>';let rows=[],old=Object.fromEntries(p.latitude.plans.map(x=>[x.id,x]));for(const n of s.latitude.plans){let a=old[n.id];if(!a){rows.push(n.id+': newly listed');continue;}for(const k of ['hourly','monthly','reservedMonthlyHourly','reservedMonthlyMonthly','reservedYearlyHourly','reservedYearlyAnnual'])if(a[k]!==n[k])rows.push(n.id+' · '+k+': '+money(a[k])+' to '+money(n[k]));for(const [name,k,denom] of [['Monthly','reservedMonthlyMonthly',1],['Yearly','reservedYearlyAnnual',12]]){let before=a[k]!=null&&a.monthly?1-a[k]/(a.monthly*denom):null,now=n[k]!=null&&n.monthly?1-n[k]/(n.monthly*denom):null;if(before!=null&&now!=null&&Math.abs(now-before)>.0005)rows.push(n.id+' · '+name+' implied discount '+(before*100).toFixed(2)+'% to '+(now*100).toFixed(2)+'% (computed from displayed totals, including rounding)');}}for(const a of p.latitude.plans)if(!s.latitude.plans.some(n=>n.id===a.id))rows.push(a.id+': no longer listed');return `<p>Compared with ${esc(p.capturedAt)}. All terms checked.</p>`+(rows.length?'<ul>'+rows.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>':'<p>No Latitude price or implied-discount changes.</p>')}
-function render(data){const snaps=Object.values(data.snapshots).sort((a,b)=>a.capturedAt.localeCompare(b.capturedAt)),s=snaps.at(-1),prev=snaps.at(-2);if(!s)throw Error('No snapshots stored');const o=s.openrouter,r=s.ramp;$('status').textContent='Data captured '+s.capturedAt+' · '+snaps.length+' snapshot(s) stored';$('content').innerHTML=`<section><h2>GPU rental prices at Latitude.sh</h2><p class="lede">Each billing term read directly. Paid yearly totals are annual, not monthly.</p><div class="cards">${s.latitude.plans.filter(p=>p.category==='Metal GPU').map(plan).join('')}</div></section><section><h2>What changed</h2>${changes(s,prev)}</section><section><h2>AI demand</h2><div class="grid2"><div class="panel"><h3>OpenRouter share of requests</h3><p class="note">Week beginning ${esc(o.marketShareWeekOf)}. Changes are request counts, not share percentage points.</p><ul class="bars">${o.marketShare.map(m=>`<li><span>${esc(m.author)}</span><span>${m.share}% (${esc(m.change||'change not shown')})</span><div class="track"><div class="fill" style="width:${m.share}%"></div></div></li>`).join('')}</ul>${link(o.source,'OpenRouter rankings')}</div><div class="panel"><h3>Ramp: US businesses paying for AI</h3><p class="note">${esc(r.periodLabel)}. Ramp businesses, not all US businesses.</p><div class="kv"><span>Any AI</span><span>${r.adoption.overall}% (+${r.adoption.overallChange} pp/mo)</span><span>Anthropic</span><span>${r.adoption.anthropic}% (+${r.adoption.anthropicChange} pp/mo)</span><span>OpenAI</span><span>${r.adoption.openai}% (+${r.adoption.openaiChange} pp/mo)</span><span>Median AI spend/employee</span><span>${money(r.spendPerEmployee)}/mo</span><span>Top 1% median</span><span>${money(r.top1SpendPerEmployee)}/mo</span><span>Top 10% median</span><span>${money(r.top10SpendPerEmployee)}/mo</span></div><h4>Median spend by financing status</h4>${r.financingStatus.map(f=>`<p>${esc(f.status)}: ${money(f.medianSpendPerEmployee)}/employee/mo</p>`).join('')}${link(r.source,'Ramp AI Index')}</div></div></section><section><h2>OpenRouter top 10 models</h2><p class="lede">Trailing 7 days, usage through ${esc(o.usageThrough)}. Prompt and completion tokens, not revenue or total market demand.</p>${o.weekTopModels.map(m=>`<div class="model"><span>${m.rank}. <strong>${esc(m.model)}</strong><small>${esc(m.author)}</small></span><span><strong>${m.tokensT}T tokens</strong><small>${esc(m.change)} versus prior 7 days</small></span></div>`).join('')}</section><section><h2>Ramp token spend by model maker</h2><p class="lede">Week ending ${esc(r.tokenSpend.periodEnd)}. This source's volume view is indexed spend, not USD or token volume. Values read from chart data.</p>${r.tokenSpend.makers.map(m=>`<div class="model"><strong>${esc(m.maker)}</strong><span>${m.index?.toFixed(4)} index</span></div>`).join('')}${link(r.tokenSource,'Ramp indexed token spend')}</section><details><summary>All CPU servers and VMs (${s.latitude.plans.filter(p=>p.category!=='Metal GPU').length})</summary><div class="cards">${s.latitude.plans.filter(p=>p.category!=='Metal GPU').map(plan).join('')}</div></details><section><h2>Data notes</h2><p>${esc(s.latitude.reservedNote)}</p><p>VM hourly-billed monthly equivalents are not shown publicly and remain blank. VM location availability was not verified behind the dashboard. No missing price was calculated. The Excel download holds all stored snapshots and all collected location rows.</p></section>`}
-async function workbook(){const response=await fetch('workbook.b64',{cache:'no-store'});if(!response.ok)throw Error('Workbook request failed: '+response.status);const raw=atob((await response.text()).trim());const bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));$('excel').href=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));}
-$('excel').addEventListener('click',e=>{if($('excel').getAttribute('href')==='#'){e.preventDefault();alert('Workbook is still loading. Please try again.')}});workbook().catch(e=>{$('excel').textContent='Excel unavailable';console.error(e)});
-async function load(){try{$('error').hidden=true;const response=await fetch('snapshots.json',{cache:'no-store'});if(!response.ok)throw Error('Snapshot request failed: '+response.status);render(await response.json());}catch(e){$('error').hidden=false;$('error').textContent='Could not load snapshots. Serve this folder on a web host or local HTTP server. '+e.message;$('status').textContent='Snapshot unavailable';}}
-$('reload').addEventListener('click',load);load();
+
+function money(n){return usd(n,2)}
+function link(u,t){return '<a href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(t)+'</a>'}
+function renderExtras(){const s=latest(),o=s.openrouter,r=s.ramp;
+$('extras').innerHTML='<section><div class="sec-head"><h2>OpenRouter top 10 models</h2></div><p class="lede">Trailing 7 days, usage through '+esc(o.usageThrough)+'. Prompt and completion tokens, not revenue or the whole AI market.</p>'+o.weekTopModels.map(m=>'<div class="model-row"><span>'+m.rank+'. <strong>'+esc(m.model)+'</strong><small>'+esc(m.author)+'</small></span><span><strong>'+m.tokensT+'T tokens</strong><small>'+esc(m.change)+'</small></span></div>').join('')+'</section><section><div class="sec-head"><h2>Ramp AI spending</h2>'+link(r.tokenSource,'Source')+'</div><p class="lede">'+esc(r.periodLabel)+'. Median AI spend '+usd(r.spendPerEmployee)+'/employee/month. Top 10% median '+usd(r.top10SpendPerEmployee)+'.</p><div class="grid2"><div class="panel"><h3>Median spend by financing status</h3>'+r.financingStatus.map(f=>'<p>'+esc(f.status)+': '+usd(f.medianSpendPerEmployee)+'/employee/mo</p>').join('')+'</div><div class="panel"><h3>Indexed spend by model maker</h3><p class="muted small">Week ending '+esc(r.tokenSpend.periodEnd)+'. Index, not USD or token count.</p>'+r.tokenSpend.makers.map(m=>'<p>'+esc(m.maker)+': '+m.index.toFixed(4)+'</p>').join('')+'</div></div></section><details><summary>Locations, stock and data notes</summary>'+s.latitude.plans.filter(p=>p.locations.length).map(p=>'<h3>'+esc(p.id)+'</h3><p>'+esc(p.availability)+'</p>'+p.locations.map(l=>'<p>'+esc(l.location)+': '+esc(l.status)+' · '+usd(l.hourly,2)+'/hr</p>').join('')).join('')+'<p>VM location availability was not verified. Missing values remain blank; no missing price was calculated.</p></details>';
+}
+function labelTables(){document.querySelectorAll('table').forEach(t=>{const h=[...t.querySelectorAll('thead th')].map(x=>x.innerText);t.querySelectorAll('tbody tr').forEach(r=>[...r.cells].forEach((c,i)=>{if(i)c.dataset.label=h[i]?.replace(/per plan/g,'').trim()||c.dataset.label||''}))})}
+async function load(){try{const response=await fetch('snapshots.json',{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);const d=await response.json();state.snaps=Object.values(d.snapshots).sort((a,b)=>a.capturedAt.localeCompare(b.capturedAt));if(!state.snaps.length)throw Error('No snapshots');state.loading=false;render();toast('Published data loaded.')}catch(e){toast('Could not load verified data: '+e.message)}}
+$('checkBtn').onclick=load;
+$('dlBtn').onclick=async()=>{try{const r=await fetch('workbook.b64',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const raw=atob((await r.text()).trim()),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0)),u=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));const a=document.createElement('a');a.href=u;a.download='compute-pricing-monitor.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(u),60000);toast('Excel history downloaded.')}catch(e){toast('Download failed: '+e.message)}};
+load();
+})();
 </script></body></html>
