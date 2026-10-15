@@ -71,3 +71,27 @@ jobs:
       - name: Deploy validated snapshot
         id: deployment
         uses: actions/deploy-pages@v4
+
+  keepalive:
+    needs: collect
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Keep repository active after a quiet period
+        run: |
+          set -euo pipefail
+          age=$(( ($(date +%s) - $(git log -1 --format=%ct)) / 86400 ))
+          echo "Days since latest main commit: $age"
+          if [ "$age" -ge 40 ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit --allow-empty -m 'Update activity'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
