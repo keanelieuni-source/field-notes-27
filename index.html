@@ -1,0 +1,87 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Compute pricing monitor</title><style>
+:root{
+  --bg:#F1F3EF; --surface:#FBFCFA; --ink:#16202B; --muted:#5B6570; --rule:#D6DAD3;
+  --accent:#2B45C4; --up:#AD3B25; --down:#1D7658;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161B; --surface:#191E25; --ink:#E5E8EB; --muted:#929BA6; --rule:#2B323B;
+    --accent:#8A9DFF; --up:#EE8A72; --down:#5CC6A2; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161B; --surface:#191E25; --ink:#E5E8EB; --muted:#929BA6; --rule:#2B323B;
+  --accent:#8A9DFF; --up:#EE8A72; --down:#5CC6A2; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.55 "Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+main{max-width:900px;margin:0 auto;padding:40px 20px 64px}
+h1,h2{font-family:"Bricolage Grotesque","Instrument Sans",system-ui,sans-serif;font-weight:700;letter-spacing:-.01em;margin:0}
+h1{font-size:clamp(28px,5vw,38px);line-height:1.08}
+h2{font-size:20px;line-height:1.25}
+p{margin:0}
+a{color:var(--accent)}
+.muted{color:var(--muted)} .small{font-size:13px}
+.up{color:var(--up)} .down{color:var(--down)}
+
+header{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end;justify-content:space-between;padding-bottom:22px;border-bottom:1px solid var(--rule)}
+.status{margin-top:8px;color:var(--muted);font-size:14px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;font-weight:500;font-size:14px;padding:8px 14px;border-radius:6px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+button:disabled{opacity:.55;cursor:default}
+button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toast{min-height:20px;margin-top:8px;font-size:13px;color:var(--muted)}
+
+section{padding:34px 0 0}
+.sec-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 16px;margin-bottom:6px}
+.sec-head a{font-size:13px}
+.lede{color:var(--muted);font-size:14px;margin-bottom:14px;max-width:70ch}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:13px}
+tr:last-child td{border-bottom:none}
+.num{text-align:right;white-space:nowrap}
+#gpuTable{min-width:600px}
+#gpuTable td.price{font-size:17px;font-weight:600}
+#gpuTable td .sub{display:block;font-size:12px;color:var(--muted);font-weight:400}
+#allTable{min-width:720px}
+
+.empty{padding:16px;border:1px dashed var(--rule);border-radius:10px;color:var(--muted);font-size:14px}
+
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px}
+.panel h3{font:600 15px/1.3 "Instrument Sans",system-ui,sans-serif;margin:0 0 2px}
+.bars{list-style:none;margin:12px 0 0;padding:0}
+.bars li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;padding:5px 0}
+.bars .val{white-space:nowrap}
+.bars .track{grid-column:1/-1;height:6px;background:var(--rule);border-radius:3px;overflow:hidden}
+.bars .fill{height:100%;background:var(--accent);border-radius:3px}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;margin-top:12px;font-size:14px}
+.kv .v{text-align:right;font-weight:600;white-space:nowrap}
+.kv .d{grid-column:1/-1;margin-top:-6px;font-size:12px;color:var(--muted)}
+.foot{margin-top:12px;font-size:13px;color:var(--muted)}
+
+details{margin-top:34px;border-top:1px solid var(--rule);padding-top:16px}
+summary{cursor:pointer;font-weight:600;font-size:15px}
+details .tbl-wrap{margin-top:14px}
+
+footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--rule);font-size:13px;color:var(--muted)}
+footer p{max-width:75ch;margin-bottom:6px}
+@media (max-width:560px){main{padding:28px 16px 48px}}
+
+.cards{display:grid;gap:16px}.plan{padding:18px;background:var(--surface);border:1px solid var(--rule);border-radius:10px}.terms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.terms strong,.terms small{display:block}.terms strong{font-size:20px}.terms small,.note{color:var(--muted)}.plan h3{margin:0 0 6px}.location{border-top:1px solid var(--rule);padding:12px 0}.location-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.plan details{margin-top:12px}.plan summary{min-height:44px;display:flex;align-items:center}.button{display:inline-flex;padding:10px 14px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);border-radius:6px;text-decoration:none;min-height:44px;align-items:center}.model{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--rule);padding:12px 0}.model small{display:block;color:var(--muted)}.grid2>*{min-width:0}h3{margin:0 0 10px}button,summary{min-height:44px}#error{padding:20px;color:var(--up)}@media(max-width:700px){.grid2{grid-template-columns:1fr}.terms{grid-template-columns:1fr}.terms>div{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;border-top:1px solid var(--rule);padding:8px 0}.terms label{grid-row:span 2}.terms small{grid-column:2}.location-grid{grid-template-columns:1fr}.model{flex-wrap:wrap}}body{overflow-wrap:break-word}
+</style></head><body><main><header><div><h1>Compute pricing monitor</h1><p id="status" class="status">Loading snapshot...</p></div><div class="actions"><a class="button" href="history.xlsx" download="compute-pricing-monitor.xlsx">Download Excel history</a><button id="reload">Reload published data</button></div></header><div id="error" hidden></div><div id="content"></div><footer><p>Opening or reloading loads the newest published snapshot. Collecting new source data and publishing it is a separate step, not a live scrape. One snapshot per date; same-day refresh replaces that date and preserves earlier days.</p><p>OpenRouter rankings data by OpenRouter is licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. Ramp values are from Ramp AI Index charts and chart data. All prices are USD per whole server, never per GPU.</p></footer></main><script>
+
+const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])), money=n=>n==null?'Not shown':new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(n), link=(url,text)=>`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(text)}</a>`;
+function plan(p){return `<article class="plan"><h3>${esc(p.id)}</h3><p class="note">${esc(p.category)} · ${esc(p.hardware)} · ${esc(p.memory)}</p><div class="terms"><div><label>Hourly billing</label><strong>${money(p.hourly)}/hr</strong><small>${p.monthly==null?'Monthly equivalent not shown':money(p.monthly)+'/mo'}</small></div><div><label>Monthly commitment</label><strong>${money(p.reservedMonthlyHourly)}/hr</strong><small>${money(p.reservedMonthlyMonthly)}/mo</small></div><div><label>Paid yearly</label><strong>${money(p.reservedYearlyHourly)}/hr</strong><small>${money(p.reservedYearlyAnnual)}/year</small></div></div><p>${esc(p.availability)}</p>${p.locations.length?`<details><summary>Locations and availability</summary><p class="note">Hourly range: ${money(p.locationHourlyMin)} to ${money(p.locationHourlyMax)}/hr. Lowest: ${esc(p.cheapestLocations.join(', '))}. Highest: ${esc(p.mostExpensiveLocations.join(', '))}. Includes out-of-stock offers.</p><div class="location-grid">${p.locations.map(l=>`<div class="location"><strong>${esc(l.location)}</strong><p>${l.status==='CURRENTLY IN STOCK'?'In stock':'Out of stock'}</p><p>Hourly: ${money(l.hourly)}/hr · ${money(l.monthly)}/mo<br>Monthly: ${money(l.reservedMonthlyHourly)}/hr · ${money(l.reservedMonthlyMonthly)}/mo<br>Yearly: ${money(l.reservedYearlyHourly)}/hr · ${money(l.reservedYearlyAnnual)}/year</p></div>`).join('')}</div></details>`:''}<p>${link(p.source,'Latitude source')}</p></article>`}
+function changes(s,p){if(!p)return '<div class="empty">First snapshot. No earlier Claude database was supplied, so no price move or discount change can be established yet.</div>';let rows=[],old=Object.fromEntries(p.latitude.plans.map(x=>[x.id,x]));for(const n of s.latitude.plans){let a=old[n.id];if(!a){rows.push(n.id+': newly listed');continue;}for(const k of ['hourly','monthly','reservedMonthlyHourly','reservedMonthlyMonthly','reservedYearlyHourly','reservedYearlyAnnual'])if(a[k]!==n[k])rows.push(n.id+' · '+k+': '+money(a[k])+' to '+money(n[k]));for(const [name,k,denom] of [['Monthly','reservedMonthlyMonthly',1],['Yearly','reservedYearlyAnnual',12]]){let before=a[k]!=null&&a.monthly?1-a[k]/(a.monthly*denom):null,now=n[k]!=null&&n.monthly?1-n[k]/(n.monthly*denom):null;if(before!=null&&now!=null&&Math.abs(now-before)>.0005)rows.push(n.id+' · '+name+' implied discount '+(before*100).toFixed(2)+'% to '+(now*100).toFixed(2)+'% (computed from displayed totals, including rounding)');}}for(const a of p.latitude.plans)if(!s.latitude.plans.some(n=>n.id===a.id))rows.push(a.id+': no longer listed');return `<p>Compared with ${esc(p.capturedAt)}. All terms checked.</p>`+(rows.length?'<ul>'+rows.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>':'<p>No Latitude price or implied-discount changes.</p>')}
+function render(data){const snaps=Object.values(data.snapshots).sort((a,b)=>a.capturedAt.localeCompare(b.capturedAt)),s=snaps.at(-1),prev=snaps.at(-2);if(!s)throw Error('No snapshots stored');const o=s.openrouter,r=s.ramp;$('status').textContent='Data captured '+s.capturedAt+' · '+snaps.length+' snapshot(s) stored';$('content').innerHTML=`<section><h2>GPU rental prices at Latitude.sh</h2><p class="lede">Each billing term read directly. Paid yearly totals are annual, not monthly.</p><div class="cards">${s.latitude.plans.filter(p=>p.category==='Metal GPU').map(plan).join('')}</div></section><section><h2>What changed</h2>${changes(s,prev)}</section><section><h2>AI demand</h2><div class="grid2"><div class="panel"><h3>OpenRouter share of requests</h3><p class="note">Week beginning ${esc(o.marketShareWeekOf)}. Changes are request counts, not share percentage points.</p><ul class="bars">${o.marketShare.map(m=>`<li><span>${esc(m.author)}</span><span>${m.share}% (${esc(m.change||'change not shown')})</span><div class="track"><div class="fill" style="width:${m.share}%"></div></div></li>`).join('')}</ul>${link(o.source,'OpenRouter rankings')}</div><div class="panel"><h3>Ramp: US businesses paying for AI</h3><p class="note">${esc(r.periodLabel)}. Ramp businesses, not all US businesses.</p><div class="kv"><span>Any AI</span><span>${r.adoption.overall}% (+${r.adoption.overallChange} pp/mo)</span><span>Anthropic</span><span>${r.adoption.anthropic}% (+${r.adoption.anthropicChange} pp/mo)</span><span>OpenAI</span><span>${r.adoption.openai}% (+${r.adoption.openaiChange} pp/mo)</span><span>Median AI spend/employee</span><span>${money(r.spendPerEmployee)}/mo</span><span>Top 1% median</span><span>${money(r.top1SpendPerEmployee)}/mo</span><span>Top 10% median</span><span>${money(r.top10SpendPerEmployee)}/mo</span></div><h4>Median spend by financing status</h4>${r.financingStatus.map(f=>`<p>${esc(f.status)}: ${money(f.medianSpendPerEmployee)}/employee/mo</p>`).join('')}${link(r.source,'Ramp AI Index')}</div></div></section><section><h2>OpenRouter top 10 models</h2><p class="lede">Trailing 7 days, usage through ${esc(o.usageThrough)}. Prompt and completion tokens, not revenue or total market demand.</p>${o.weekTopModels.map(m=>`<div class="model"><span>${m.rank}. <strong>${esc(m.model)}</strong><small>${esc(m.author)}</small></span><span><strong>${m.tokensT}T tokens</strong><small>${esc(m.change)} versus prior 7 days</small></span></div>`).join('')}</section><section><h2>Ramp token spend by model maker</h2><p class="lede">Week ending ${esc(r.tokenSpend.periodEnd)}. This source's volume view is indexed spend, not USD or token volume. Values read from chart data.</p>${r.tokenSpend.makers.map(m=>`<div class="model"><strong>${esc(m.maker)}</strong><span>${m.index?.toFixed(4)} index</span></div>`).join('')}${link(r.tokenSource,'Ramp indexed token spend')}</section><details><summary>All CPU servers and VMs (${s.latitude.plans.filter(p=>p.category!=='Metal GPU').length})</summary><div class="cards">${s.latitude.plans.filter(p=>p.category!=='Metal GPU').map(plan).join('')}</div></details><section><h2>Data notes</h2><p>${esc(s.latitude.reservedNote)}</p><p>VM hourly-billed monthly equivalents are not shown publicly and remain blank. VM location availability was not verified behind the dashboard. No missing price was calculated. The Excel download holds all stored snapshots and all collected location rows.</p></section>`}
+async function load(){try{$('error').hidden=true;const response=await fetch('snapshots.json',{cache:'no-store'});if(!response.ok)throw Error('Snapshot request failed: '+response.status);render(await response.json());}catch(e){$('error').hidden=false;$('error').textContent='Could not load snapshots. Serve this folder on a web host or local HTTP server. '+e.message;$('status').textContent='Snapshot unavailable';}}
+$('reload').addEventListener('click',load);load();
+</script></body></html>
