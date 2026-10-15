@@ -27,6 +27,9 @@ jobs:
           python test_demand.py
       - name: Collect and validate Latitude, OpenRouter and Ramp
         run: python collect_latitude.py
+      - name: Collect optional GPU Economy benchmark
+        continue-on-error: true
+        run: python test_benchmark.py && python collect_benchmark.py
       - name: Rebuild Excel history
         run: python rebuild_workbook.py
       - name: Commit validated data only
