@@ -88,6 +88,8 @@ footer p{max-width:75ch;margin-bottom:6px}
 button,summary{min-height:44px}summary{padding:8px 0}.model-row{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--rule)}.model-row small{display:block;color:var(--muted)}.model-row>span:last-child{text-align:right}.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.panel{min-width:0}.kv .v{white-space:normal}.kv{grid-template-columns:minmax(0,1fr) minmax(0,auto)}
 @media(max-width:650px){.grid2{grid-template-columns:1fr}#gpuTable,#allTable{min-width:0}table,tbody,tr,td{display:block;width:100%}thead{display:none}tr{padding:12px 14px;border-bottom:1px solid var(--rule)}td{padding:8px 0;border:0}.num{white-space:normal;text-align:right}td[data-label]{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 12px}td[data-label]::before{content:attr(data-label);text-align:left;color:var(--muted);font-size:13px;font-weight:400}td[data-label]>.sub{grid-column:2}.tbl-wrap{overflow:visible}.bars .val{white-space:normal}.model-row{font-size:14px}.model-row>span{min-width:0}.panel{padding:14px}.actions{width:100%}}
 #benchmark,#benchmark *{box-sizing:border-box;min-width:0}#benchmark .sub{display:block;font-size:12px;color:var(--muted)}#benchmark select{max-width:100%}#benchmark td{overflow-wrap:anywhere}@media(max-width:650px){#benchmark tr{width:100%}#benchmark td[data-label]{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+
+.testPanel{border:1px solid var(--rule);border-radius:12px;padding:22px;margin:24px 0;background:white;min-width:0}.testPanel h3{font-size:23px;margin:0 0 8px}.testSub{color:var(--muted);font-size:13px}.testChart svg{width:100%;display:block;min-width:0}.testBadge{font-size:11px;background:#f4efec;padding:6px 10px;border-radius:4px}.testToolbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:18px 0}.testToolbar select{min-height:44px;padding:8px;max-width:100%}.testToolbar label{font-size:14px}.testLegend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:12px;line-height:1.4;margin:8px 0 18px}.testLegend span{max-width:100%;overflow-wrap:anywhere}.testLegend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px}.testReadout{font-size:13px;background:#f5f7f6;padding:12px;border-radius:6px;overflow-wrap:anywhere}.testChoices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.testChoices label{display:flex;gap:10px;align-items:start;border:1px solid var(--rule);padding:12px;min-width:0;border-radius:6px;cursor:pointer;min-height:44px}.testChoices input{margin-top:5px;flex-shrink:0;width:18px;height:18px}.testChoices strong{font-size:13px;display:block;overflow-wrap:anywhere}.testChoices small{font-size:12px;display:block;color:var(--muted);line-height:1.5}.testNote{padding:18px;background:#f4efec;border-radius:8px;font-size:13px}.testDataRows div{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;border-bottom:1px solid var(--rule);padding:8px 0;font-size:13px}.testDataRows small{grid-column:1/-1}.testDataRows strong{text-align:right}.testLayers{margin-top:18px}.testPanel details{margin-top:18px}.testPanel h4{margin:18px 0 4px}@media(max-width:650px){.testPanel{padding:14px 10px}.testChoices{grid-template-columns:1fr}.testPanel h3{font-size:20px}.testChart svg{height:230px}.testToolbar button{font-size:12px}.testBadge{display:block}.testDataRows div{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -105,6 +107,8 @@ button,summary{min-height:44px}summary{padding:8px 0}.model-row{display:flex;jus
       <p class="toast" id="toast" role="status" aria-live="polite"></p>
     </div>
   </header>
+
+  <section id="priceTest" aria-label="GPU index comparison"></section>
 
   <section aria-labelledby="gpu-h">
     <div class="sec-head">
@@ -288,4 +292,4 @@ $('checkBtn').onclick=load;
 $('dlBtn').onclick=async()=>{try{const r=await fetch('workbook.b64',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const raw=atob((await r.text()).trim()),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0)),u=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));const a=document.createElement('a');a.href=u;a.download='compute-pricing-monitor.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(u),60000);toast('Excel history downloaded.')}catch(e){toast('Download failed: '+e.message)}};
 load();
 })();
-</script></body></html>
+</script><script src="comparison.js"></script></body></html>
