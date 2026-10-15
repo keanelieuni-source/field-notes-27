@@ -22,6 +22,11 @@ def main():
                 for p in s['weeks']:
                     points.append({'date':p['week_start'],'median':p['median_usd_per_gpu_hour'],'cheapest':p['min_usd_per_gpu_hour'],'providers':p['providers'],'minProvider':p.get('min_provider'),'minRegion':p.get('min_region'),'minSource':p.get('min_source_url')})
                 changes.append({'id':identity,'gpu':gpu,'kind':kind,'name':('SkyPilot reconstructed 'if kind=='catalog'else'GPU Economy own model ') +gpu.upper(),'source':URL,'points':points})
+        index=d.get('index',{}).get('points',[])
+        if index:
+            changes.append({'id':'h100-own-index','gpu':'h100','kind':'own-model','name':'GPU Economy H100 SXM index (own scrape, different panel)','source':URL,'points':[{'date':p['week_start'],'median':p['usd_per_gpu_hour'],'providers':p['providers'],'vintage':p.get('vintage')} for p in index]})
+        if not changes:raise ValueError('No expected model series found')
+        seed['sources']['sellerRead']='Prices are separate dated observations from daily prices.json checks. See each point for date and origin.'
         # Preserve old weeks; refresh only the explicitly current calendar week.
         for new in changes:
             match=next((a for a in seed['aggregates']if a['id']==new['id']),None)
@@ -33,6 +38,6 @@ def main():
                     elif point['date']==week:match['points']=[point if p['date']==week else p for p in match['points']]
                 match['points'].sort(key=lambda p:p['date'])
             else:seed['aggregates'].append(new)
-        (ROOT/'comparison_history.json').write_text(json.dumps(seed,separators=(',',':'))+'\n');meta.write_text(json.dumps({'etag':etag,'updatedAt':d['data_updated_at']})+'\n')
+        (ROOT/'comparison_history.json').write_text(json.dumps(seed,separators=(',',':'))+'\n');meta.write_text(json.dumps({'etag':etag,'updatedAt':d['data_updated_at']})+'\n');print('Aggregate history loaded:',len(changes),'series; source updated',d['data_updated_at'])
     except Exception as e:print('::warning::GPU Economy aggregate history failed; stored history unchanged: '+str(e)[:200])
 if __name__=='__main__':main()
