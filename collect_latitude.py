@@ -96,9 +96,9 @@ def main():
     now=datetime.now(ZoneInfo('Australia/Sydney'));key=now.date().isoformat();snap=copy.deepcopy(previous)
     snap['date']=key;snap['capturedAt']=now.isoformat(timespec='seconds');snap['latitude']['plans']=plans
     snap['latitude']['capturedAt']=snap['capturedAt'];snap['latitude']['reservedNote']='All billing terms read directly. Annual totals are annual. Missing values remain blank. Daily Latitude collection validated before publication.'
-    # AI demand is retained with its original source dates, never presented as freshly collected.
-    snap['openrouter'].setdefault('capturedAt',previous['capturedAt']);snap['ramp'].setdefault('capturedAt',previous['capturedAt'])
+    from collect_demand import collect as collect_ai
+    snap['openrouter'],snap['ramp']=collect_ai(previous['openrouter'],previous['ramp'],snap['capturedAt'])
     data['snapshots'][key]=snap
     candidate=ROOT/'snapshots.json.tmp';candidate.write_text(json.dumps(data,separators=(',',':'))+'\n',encoding='utf-8');candidate.replace(ROOT/'snapshots.json')
-    print('Validated',len(plans),'plans; saved',key,'and preserved',len(data['snapshots']),'date keys. AI demand retained with original dates.')
+    print('Validated',len(plans),'plans; saved',key,'and preserved',len(data['snapshots']),'date keys. OpenRouter and Ramp validated with original source periods.')
 if __name__=='__main__': main()
