@@ -33,12 +33,15 @@ No earlier Claude history was supplied, so a price change cannot be established 
 
 Sources: https://www.latitude.sh/pricing , https://openrouter.ai/rankings , https://ramp.com/data/ai-index . OpenRouter rankings data is CC BY 4.0: https://creativecommons.org/licenses/by/4.0/ .
 
-## Daily Latitude auto-update
+## Daily compute monitor auto-update
 
-Actions > Latitude daily update > Run workflow runs `collect_latitude.py`, rebuilds the workbook, commits only `snapshots.json` and `workbook.b64`, then deploys Pages. It runs daily at 21:17 UTC. GitHub schedules can start late. No VM or paid service is used by this workflow.
+Actions > Compute monitor daily update > Run workflow runs `collect_latitude.py`, rebuilds the workbook, commits only `snapshots.json` and `workbook.b64`, then deploys Pages. It runs daily at 21:17 UTC. GitHub schedules can start late. No VM or paid service is used by this workflow.
 
 The collector reads Hourly, Monthly and Paid yearly prices directly, plus every metal server's location and stock tables. It does not derive missing prices. It rejects failed pages, missing/duplicate plans, incomplete terms, invalid prices, changed plan/hardware/location sets, or any price move over 50% from the previous snapshot. Rejected collections stop before publication, leaving the last good data live. A legitimate large change or new plan needs manual review and a baseline update before automation resumes. Source changes can still defeat a scraper; review failures in Actions.
 
-One Sydney-calendar-date key is written per day. Same-day runs replace only that day's entry; older dates are kept. OpenRouter and Ramp are not scraped by this workflow yet: their verified figures and original source periods are carried forward and shown on the dashboard. Do not treat a new Latitude capture date as fresh AI-demand collection. VM stock/location data is still unverified.
+One Sydney-calendar-date key is written per day. Same-day runs replace only that day's entry; older dates are kept. OpenRouter top models and maker request shares are read from its public numeric tables. Ramp adoption, median spending, financing-status spending and indexed maker spend are read from the numeric datasets that drive its charts. OpenRouter usage/source-week dates and Ramp monthly/weekly source periods remain visible. A daily check does not create a new source release. If any required source is unavailable or fails validation, the entire update fails before the snapshot is saved; the last good data stays live. VM stock/location data is still unverified.
 
 Collection JSON and an overview screenshot are kept in the `latitude-collection` artifact for 7 days. The workflow's collection job has repository contents write permission to commit these data files; its deployment job has Pages deployment permission. It uses only the standard GitHub token, with no stored personal secrets. `Publish dashboard changes` separately redeploys manual edits to the three public assets.
+
+
+Demand safety checks require ten unique ranked models, valid token units, request shares summing to about 100%, non-regressing source dates, bounded adoption rates, ordered spend medians, complete financing categories and major maker indices. Large aggregate moves stop for review. `python test_demand.py` and `python test_collector.py` exercise malformed reads and unchanged-file behavior before collection. These checks reduce risk, but cannot prove that every plausible source-side error is wrong. New source releases may need code changes if the page structure changes. Ramp adoption and per-employee spend update monthly; its maker index is weekly. These are different measures, not raw token volume or total industry revenue.
