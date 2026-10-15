@@ -2,7 +2,7 @@ name: Publish dashboard changes
 on:
   push:
     branches: [main]
-    paths: [index.html, snapshots.json, workbook.b64]
+    paths: [index.html, snapshots.json, workbook.b64, comparison.js, comparison_data.json]
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,11 +20,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install openpyxl==3.1.5
       - uses: actions/configure-pages@v5
       - name: Prepare public files only
         run: |
-          mkdir public
-          cp index.html snapshots.json workbook.b64 public/
+          python build_comparison.py
+          python rebuild_workbook.py
+          python prepare_public.py
+        env:
+          ANALYSIS_PUBLIC_ENABLED: ${{ vars.ANALYSIS_PUBLIC_ENABLED }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public
