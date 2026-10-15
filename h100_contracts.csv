@@ -1,0 +1,23 @@
+date,period,h100_1y_p25_usd_per_gpu_hour,h100_1y_p75_usd_per_gpu_hour,h100_onDemand_p25_usd_per_gpu_hour,h100_onDemand_p75_usd_per_gpu_hour,h100_1y_sold_out,h100_onDemand_sold_out
+2023-01-01,1H 2023,2.7,3.4,,,false,false
+2023-07-01,2H 2023,2.65,3.3,,,false,false
+2024-01-01,1Q 2024,2.5,3.1,,,false,false
+2024-04-01,2Q 2024,2.2,2.5,3.9,3.9,false,false
+2024-07-01,3Q 2024,2.15,2.45,3.45,3.45,false,false
+2024-10-01,4Q 2024,1.9,2.1,2.85,3.15,false,false
+2025-01-01,1Q 2025,1.8,2.1,2.7,3,false,false
+2025-04-01,2Q 2025,1.8,2.1,2.5,3,false,false
+2025-07-01,Jul 2025,1.7,2,2.25,3,false,false
+2025-08-01,Aug 2025,1.5,2,2,3,false,false
+2025-09-01,Sep 2025,1.5,2,2,3,false,false
+2025-10-01,Oct 2025,1.45,1.95,2.2,3,false,false
+2025-11-01,Nov 2025,1.45,2,2.2,3,false,false
+2025-12-01,Dec 2025,1.45,2,2.2,3,false,false
+2026-01-01,Jan 2026,1.59,2.08,2.2,3,false,false
+2026-02-01,Feb 2026,1.8,2.35,,,false,true
+2026-03-01,Mar 2026,2,2.7,,,false,true
+2026-04-01,Apr 2026,,,,,false,true
+2026-05-01,May 2026,2.3,3,3.85,3.85,false,false
+2026-06-01,June 2026,2.2,3,,,false,true
+2026-07-01,July 2026,2.4,3.2,,,false,true
+2026-08-01,Aug 2026,2.4,3.2,,,false,true
