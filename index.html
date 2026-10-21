@@ -222,7 +222,7 @@ button,summary{min-height:44px}summary{padding:8px 0}.model-row{display:flex;jus
 
   function renderDemand(){
     var o=(latest()||{}).openrouter||{};
-    $("orNote").textContent=o.marketShareWeekOf?"Week beginning "+o.marketShareWeekOf+", with change in requests versus the week before. Checked "+fmtDate(o.checkedAt||o.capturedAt)+".":"";
+    $("orNote").textContent=o.marketShareWeekOf?"Week beginning "+o.marketShareWeekOf+", with change in requests versus the week before. "+(o.stale?"Refresh failed; showing last good data from "+fmtDate(o.staleSince||o.capturedAt)+" (checked "+fmtDate(o.checkedAt)+").":"Checked "+fmtDate(o.checkedAt||o.capturedAt)+"."):"";
     var sh=(o.marketShare||[]).filter(function(m){return !/other/i.test(m.author)}).slice(0,6);
     if(!sh.length){$("orShare").innerHTML='<li class="muted">Not stored yet.</li>'}
     else{var mx=Math.max.apply(null,sh.map(function(m){return m.share}));
@@ -233,7 +233,7 @@ button,summary{min-height:44px}summary{padding:8px 0}.model-row{display:flex;jus
     var r=(latest()||{}).ramp;
     if(!r){$("rampKv").innerHTML='<span class="muted">Not stored yet.</span>';$("rampNote").textContent="";$("rampTake").textContent="";return}
     var a=r.adoption||{};
-    $("rampNote").textContent="Share of businesses on Ramp, "+(r.periodLabel||r.period)+". Checked "+fmtDate(r.checkedAt||r.capturedAt)+"; monthly adoption/spend, weekly indexed maker spend.";
+    $("rampNote").textContent="Share of businesses on Ramp, "+(r.periodLabel||r.period)+". "+(r.stale?"Refresh failed; showing last good data from "+fmtDate(r.staleSince||r.capturedAt)+" (checked "+fmtDate(r.checkedAt)+").":"Checked "+fmtDate(r.checkedAt||r.capturedAt)+".")+" Monthly adoption/spend, weekly indexed maker spend.";
     function kv(k,v,d){return '<span>'+esc(k)+'</span><span class="v">'+esc(v)+'</span>'+(d?'<span class="d">'+esc(d)+'</span>':'')}
     $("rampKv").innerHTML=kv("Any AI",a.overall+"%","+"+a.overallChange+" pp/mo")+kv("Anthropic",a.anthropic+"%","+"+a.anthropicChange+" pp/mo")+kv("OpenAI",a.openai+"%","+"+a.openaiChange+" pp/mo")+
       (r.top1SpendPerEmployee!=null?kv("AI spend per employee, top 1% of firms","$"+r.top1SpendPerEmployee.toLocaleString("en-US")+"/mo","Median for top 1% of Ramp firms"):"");
