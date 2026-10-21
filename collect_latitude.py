@@ -96,8 +96,10 @@ def main():
     now=datetime.now(ZoneInfo('Australia/Sydney'));key=now.date().isoformat();snap=copy.deepcopy(previous)
     snap['date']=key;snap['capturedAt']=now.isoformat(timespec='seconds');snap['latitude']['plans']=plans
     snap['latitude']['capturedAt']=snap['capturedAt'];snap['latitude']['reservedNote']='All billing terms read directly. Annual totals are annual. Missing values remain blank. Daily Latitude collection validated before publication.'
-    from collect_demand import collect as collect_ai
-    snap['openrouter'],snap['ramp']=collect_ai(previous['openrouter'],previous['ramp'],snap['capturedAt'])
+    from collect_demand import collect_partial as collect_ai
+    snap['openrouter'],snap['ramp'],demand_errors=collect_ai(previous['openrouter'],previous['ramp'],snap['capturedAt'])
+    for src_name,err in demand_errors.items():
+        print('WARNING:',src_name,'unavailable; snapshot keeps last validated data marked stale.',err)
     data['snapshots'][key]=snap
     candidate=ROOT/'snapshots.json.tmp';candidate.write_text(json.dumps(data,separators=(',',':'))+'\n',encoding='utf-8');candidate.replace(ROOT/'snapshots.json')
     print('Validated',len(plans),'plans; saved',key,'and preserved',len(data['snapshots']),'date keys. OpenRouter and Ramp validated with original source periods.')
