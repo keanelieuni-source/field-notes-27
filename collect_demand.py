@@ -33,7 +33,7 @@ def read_openrouter(page):
 def read_ramp(page):
     r=page.goto(RAMP_URL,wait_until='domcontentloaded',timeout=60000);require(r and r.status==200,'Ramp HTTP failure')
     page.locator('.token-plot svg').wait_for(timeout=40000)
-    raw=page.evaluate("""()=>{const el=document.querySelector('.token-plot svg');const key=Object.keys(el).find(k=>k.startsWith('__reactFiber'));let f=el[key],out={};for(let i=0;f&&i<30;i++,f=f.return){const p=f.memoizedProps;if(p?.chart)out.chart=p.chart;if(p?.tokenVolumes){for(const k of ['adoptionOverall','adoptionVendor','spendPerEmployee','spendPerEmployeeCurated'])out[k]=p[k]}}return out}""")
+    raw=page.evaluate("""()=>{const el=document.querySelector('.token-plot svg');const key=Object.keys(el).find(k=>k.startsWith('__reactFiber'));let f=el[key],out={};for(let i=0;f&&i<30;i++,f=f.return){const p=f.memoizedProps;if(!p)continue;if(p.chart&&!out.chart)out.chart=p.chart;for(const k of ['adoptionOverall','adoptionVendor','spendPerEmployee','spendPerEmployeeCurated'])if(p[k]&&!out[k])out[k]=p[k]}return out}""")
     (OUT/'ramp-raw.json').write_text(json.dumps(raw,indent=2))
     require(all(raw.get(k) for k in ['chart','adoptionOverall','adoptionVendor','spendPerEmployee','spendPerEmployeeCurated']),'Ramp numeric datasets unavailable')
     a=max(raw['adoptionOverall'],key=lambda x:x['date_month']);period=a['date_month'];sp=next((x for x in raw['spendPerEmployee'] if x['date_month']==period),None)
@@ -80,3 +80,43 @@ def collect(old_o,old_r,now):
     validate(o,r,old_o,old_r)
     for x in [o,r]:x['capturedAt']=now;x['checkedAt']=now
     return o,r
+
+def mark_stale(x,now,reason):
+    """Reuse the last validated payload, clearly marked stale. capturedAt stays the data's own date."""
+    x=copy.deepcopy(x)
+    x['checkedAt']=now
+    x['stale']=True
+    x['staleSince']=x.get('capturedAt')
+    x['staleReason']=reason[:300]
+    return x
+
+def collect_partial(old_o,old_r,now):
+    """Collect OpenRouter and Ramp independently. A source that fails collection or
+    validation falls back to the last validated payload marked stale, so one
+    unavailable source never blocks the day's snapshot."""
+    OUT.mkdir(exist_ok=True)
+    o_new=r_new=None;err_o=err_r=None
+    with sync_playwright() as p:
+        args={'headless':True}
+        if os.getenv('CHROME_PATH'):args.update(executable_path=os.environ['CHROME_PATH'],args=['--no-sandbox'])
+        b=p.chromium.launch(**args);page=b.new_page(viewport={'width':1440,'height':1000})
+        try:
+            try:o_new=read_openrouter(page)
+            except Exception as e:err_o=e
+            try:r_new=read_ramp(page)
+            except Exception as e:err_r=e
+        finally:b.close()
+    o=r=None;errors={}
+    if o_new is not None:
+        try:validate(o_new,old_r,old_o,old_r);o=o_new
+        except Exception as e:errors['openrouter']='validation failed: '+str(e)
+    elif err_o is not None:errors['openrouter']='collection failed: '+str(err_o)
+    if r_new is not None:
+        try:validate(old_o,r_new,old_o,old_r);r=r_new
+        except Exception as e:errors['ramp']='validation failed: '+str(e)
+    elif err_r is not None:errors['ramp']='collection failed: '+str(err_r)
+    if o is not None:o['capturedAt']=now;o['checkedAt']=now
+    else:o=mark_stale(old_o,now,errors.get('openrouter','unavailable'))
+    if r is not None:r['capturedAt']=now;r['checkedAt']=now
+    else:r=mark_stale(old_r,now,errors.get('ramp','unavailable'))
+    return o,r,errors
