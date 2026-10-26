@@ -21,3 +21,4 @@ date,period,h100_1y_p25_usd_per_gpu_hour,h100_1y_p75_usd_per_gpu_hour,h100_onDem
 2026-06-01,June 2026,2.2,3,,,false,true
 2026-07-01,July 2026,2.4,3.2,,,false,true
 2026-08-01,Aug 2026,2.4,3.2,,,false,true
+2026-09-01,Sep 2026,2.4,3.3,,,false,true
