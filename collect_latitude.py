@@ -32,12 +32,16 @@ def classify_table(table):
 
 def missing_plan_record(old_plan,last_observed_at,checked_at):
     """Keep historical values separate from a missing current listing."""
-    last_known={k:copy.deepcopy(old_plan.get(k)) for k in FIELDS+['hardware','memory','locations','availability','basis','source']}
+    already_missing=old_plan.get('currentStatus')=='not_listed_in_current_catalog'
+    observed=old_plan.get('lastObservedAt') if already_missing else last_observed_at
+    baseline=old_plan.get('lastKnown') if already_missing else old_plan
+    require(isinstance(baseline,dict),'Missing historical baseline for unavailable plan: '+old_plan.get('id','?'))
+    last_known={k:copy.deepcopy(baseline.get(k)) for k in FIELDS+['hardware','memory','locations','availability','basis','source']}
     return {'id':old_plan['id'],'category':old_plan['category'],'hardware':old_plan.get('hardware',''),'memory':old_plan.get('memory',''),
       **{k:None for k in FIELDS},'source':old_plan.get('source','https://www.latitude.sh/pricing'),'locations':[],
       'cheapestLocations':[],'mostExpensiveLocations':[],'locationHourlyMin':None,'locationHourlyMax':None,
       'availability':'Not listed in the current pricing catalog; retirement not confirmed.','currentStatus':'not_listed_in_current_catalog',
-      'checkedAt':checked_at,'lastObservedAt':last_observed_at,'lastKnown':last_known,
+      'checkedAt':checked_at,'lastObservedAt':observed,'lastKnown':last_known,
       'basis':'Current catalog does not list this plan. Earlier observation preserved in lastKnown; no current price inferred.'}
 
 def validate_against_previous(plan, prior):
