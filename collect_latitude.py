@@ -63,6 +63,19 @@ def validate_against_previous(plan, prior):
             if a is not None: require(.5<=b/a<=1.5,'Location price move exceeds safety bound: '+ident+' '+loc['location']+' '+k)
     if prior.get('source'): plan['source']=prior['source']
 
+def select_billing_term(page,term):
+    """Select one billing period in each product section and wait on live DOM state."""
+    buttons=page.get_by_role('button',name=term,exact=True)
+    count=buttons.count()
+    require(count==3, 'Expected 3 billing selectors for '+term+', found '+str(count))
+    for i in range(count):
+        buttons.nth(i).click()
+        # Query the live DOM after the click. React may replace the button
+        # node, so polling a pre-click ElementHandle can wait forever on a
+        # detached node even though the visible selector has updated.
+        page.wait_for_function("arg=>{const bs=[...document.querySelectorAll('button')].filter(e=>e.innerText.trim()===arg.term);return bs.length===3&&!bs[arg.index].className.includes('hover:text-v2-slate-8')}",arg={'term':term,'index':i},timeout=15000)
+    page.wait_for_function("term=>{const bs=[...document.querySelectorAll('button')].filter(e=>e.innerText.trim()===term);return bs.length===3&&bs.every(e=>!e.className.includes('hover:text-v2-slate-8'))}",arg=term,timeout=15000)
+
 def collect():
     views, dialogs = {}, {}
     with sync_playwright() as p:
@@ -74,12 +87,7 @@ def collect():
         require(response and response.status==200, 'Pricing page did not return HTTP 200')
         page.locator('table').first.wait_for(timeout=30000)
         for term in ['Hourly','Monthly','Paid yearly']:
-            buttons=page.get_by_role('button',name=term,exact=True)
-            require(buttons.count()>=3, 'Missing billing selectors: '+term)
-            for i in range(buttons.count()):
-                buttons.nth(i).click()
-                page.wait_for_function("e=>!e.className.includes('hover:text-v2-slate-8')",arg=buttons.nth(i).element_handle())
-            page.wait_for_function("term=>[...document.querySelectorAll('button')].filter(e=>e.innerText===term).every(e=>!e.className.includes('hover:text-v2-slate-8'))",arg=term)
+            select_billing_term(page,term)
             views[term]=page.locator('table').evaluate_all('ts=>ts.map(t=>[...t.rows].map(r=>[...r.cells].map(c=>c.innerText)))')
         base=[t for t in views['Hourly'] if t and t[0] and t[0][0]=='PLAN']
         categories={id(t):classify_table(t) for t in base}
