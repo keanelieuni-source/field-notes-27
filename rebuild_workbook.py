@@ -13,6 +13,12 @@ rows = {name: [] for name in ["Latitude plans", "Latitude locations", "OpenRoute
 for key, s in sorted(data["snapshots"].items()):
     for p in s["latitude"]["plans"]:
         row = {"snapshotDate": key, **{k: v for k, v in p.items() if not isinstance(v, (list, dict))}}
+        last_known = p.get("lastKnown", {})
+        for field in ["hourly", "monthly", "reservedMonthlyHourly", "reservedMonthlyMonthly", "reservedYearlyHourly", "reservedYearlyAnnual"]:
+            row["lastKnown_" + field] = last_known.get(field)
+        row["lastKnown_hardware"] = last_known.get("hardware")
+        row["lastKnown_memory"] = last_known.get("memory")
+        row["lastKnown_availability"] = last_known.get("availability")
         for field in ["cheapestLocations", "mostExpensiveLocations"]:
             row[field] = ", ".join(p.get(field, []))
         rows["Latitude plans"].append(row)
