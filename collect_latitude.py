@@ -64,15 +64,16 @@ def validate_against_previous(plan, prior):
     if prior.get('source'): plan['source']=prior['source']
 
 def select_billing_term(page,term):
-    """Select one billing period in each product section and wait on live DOM state."""
+    """Select one billing period per product section after React hydration."""
     buttons=page.get_by_role('button',name=term,exact=True)
     count=buttons.count()
     require(count==3, 'Expected 3 billing selectors for '+term+', found '+str(count))
+    # Server-rendered buttons can be present before React installs handlers. In
+    # that interval clicks are no-ops and a class-based wait times out. Wait for
+    # each actual control to be interactive, then select and confirm live state.
+    page.wait_for_function("arg=>{const bs=[...document.querySelectorAll('button')].filter(e=>e.innerText.trim()===arg);return bs.length===3&&bs.every(e=>{const k=Object.keys(e).find(k=>k.startsWith('__reactProps$'));return !!(k&&typeof e[k].onClick==='function')})}",arg=term,timeout=15000)
     for i in range(count):
         buttons.nth(i).click()
-        # Query the live DOM after the click. React may replace the button
-        # node, so polling a pre-click ElementHandle can wait forever on a
-        # detached node even though the visible selector has updated.
         page.wait_for_function("arg=>{const bs=[...document.querySelectorAll('button')].filter(e=>e.innerText.trim()===arg.term);return bs.length===3&&!bs[arg.index].className.includes('hover:text-v2-slate-8')}",arg={'term':term,'index':i},timeout=15000)
     page.wait_for_function("term=>{const bs=[...document.querySelectorAll('button')].filter(e=>e.innerText.trim()===term);return bs.length===3&&bs.every(e=>!e.className.includes('hover:text-v2-slate-8'))}",arg=term,timeout=15000)
 
