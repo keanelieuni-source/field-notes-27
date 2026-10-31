@@ -24,29 +24,34 @@ for bad in [[['PLAN','Other'],['m4.x','x']], [['PLAN','CPU'],['unknown','x']], [
     except ValueError: pass
     else: raise AssertionError('unrecognized table accepted: '+repr(bad))
 
-# Billing selection must wait against current DOM state, not a captured element.
+# Billing selection waits for React hydration before clicks, then validates live state.
 class FakeButton:
     def __init__(self,page,index): self.page,self.index=page,index
-    def click(self): self.page.active[self.index]=True  # simulate a replaced DOM node
+    def click(self):
+        assert self.page.hydrated, 'clicked before React hydration'
+        self.page.active[self.index]=True
 class FakeButtons:
     def __init__(self,page): self.page=page
     def count(self): return len(self.page.active)
     def nth(self,index): return FakeButton(self.page,index)
 class FakePage:
-    def __init__(self): self.active=[False,False,False];self.waits=[]
+    def __init__(self): self.active=[False,False,False];self.waits=[];self.hydrated=False
     def get_by_role(self,*args,**kwargs): return FakeButtons(self)
     def wait_for_function(self,script,arg=None,timeout=None):
         self.waits.append((arg,timeout))
-        if isinstance(arg,dict): assert self.active[arg['index']]
+        if isinstance(arg,str):
+            assert arg in ['Monthly','Paid yearly']
+            self.hydrated=True
+        elif isinstance(arg,dict): assert self.active[arg['index']]
         else: assert all(self.active)
 class NeverSettlesPage(FakePage):
-    def wait_for_function(self,script,arg=None,timeout=None): raise TimeoutError('selector state did not change')
-ui=FakePage();collector.select_billing_term(ui,'Monthly');assert all(ui.active) and len(ui.waits)==4
+    def wait_for_function(self,script,arg=None,timeout=None): raise TimeoutError('readiness/state did not arrive')
+ui=FakePage();collector.select_billing_term(ui,'Monthly');assert all(ui.active) and len(ui.waits)==5
 assert all(timeout==15000 for _,timeout in ui.waits)
 try:collector.select_billing_term(NeverSettlesPage(),'Paid yearly')
 except TimeoutError:pass
-else:raise AssertionError('failed billing selector was allowed to continue')
-print('billing selector current-DOM success and timeout behavior passed')
+else:raise AssertionError('failed readiness was allowed to continue')
+print('billing selector hydration readiness, current-DOM success, and timeout behavior passed')
 
 # Unavailable Gen3 history remains separated from null current values.
 unavailable=[p for p in latest['latitude']['plans'] if p.get('currentStatus')=='not_listed_in_current_catalog']
