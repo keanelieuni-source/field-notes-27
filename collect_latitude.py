@@ -153,5 +153,5 @@ def main():
     for src_name,err in demand_errors.items():print('WARNING:',src_name,'unavailable; snapshot keeps last validated data marked stale.',err)
     data['snapshots'][key]=snap
     candidate=ROOT/'snapshots.json.tmp';candidate.write_text(json.dumps(data,separators=(',',':'))+'\n',encoding='utf-8');candidate.replace(ROOT/'snapshots.json')
-    print('Validated',len(new),'current plans;',len(missing),'known plans not listed; saved',key,'and preserved',len(data['snapshots']),'date keys. OpenRouter and Ramp validated with original source periods.')
+    print('Validated',len(new),'current plans;',len(missing),'known plans not listed; saved',key,'and preserved',len(data['snapshots']),'date keys. OpenRouter validated; Ramp monthly datasets refreshed with independently stale maker index where noted.')
 if __name__=='__main__': main()
