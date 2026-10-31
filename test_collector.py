@@ -1,5 +1,6 @@
 """Offline tests for catalog changes, mutation gates and historical preservation."""
 import copy,json,tempfile
+from datetime import datetime
 from pathlib import Path
 import collect_latitude as collector
 from collect_latitude import classify_table, missing_plan_record, validate_against_previous
@@ -99,11 +100,18 @@ try:
             print(kind,'rejected; stored file unchanged')
 
     def run_main(plans):
+        class FrozenDateTime(datetime):
+            @classmethod
+            def now(cls,tz=None):
+                return cls(2026,11,2,8,0,0,tzinfo=tz)
         with tempfile.TemporaryDirectory() as td:
             collector.ROOT=Path(td);f=collector.ROOT/'snapshots.json';f.write_text(json.dumps(data))
             before=json.loads(f.read_text())
+            collector.datetime=FrozenDateTime
             collector.collect=lambda:copy.deepcopy(plans)
-            collector.main();after=json.loads(f.read_text())
+            try:collector.main()
+            finally:collector.datetime=datetime
+            after=json.loads(f.read_text())
             return before,after
 
     # Listed -> unavailable: preserve source values and the date it was actually observed.
