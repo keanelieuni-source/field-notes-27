@@ -30,18 +30,46 @@ def read_openrouter(page):
     page.screenshot(path=str(OUT/'openrouter.png'),full_page=True)
     return result
 
-def read_ramp(page):
+def read_ramp(page,anchor,now):
+    OUT.mkdir(exist_ok=True)
     r=page.goto(RAMP_URL,wait_until='domcontentloaded',timeout=60000);require(r and r.status==200,'Ramp HTTP failure')
-    page.locator('.token-plot svg').wait_for(timeout=40000)
-    raw=page.evaluate("""()=>{const el=document.querySelector('.token-plot svg');const key=Object.keys(el).find(k=>k.startsWith('__reactFiber'));let f=el[key],out={};for(let i=0;f&&i<30;i++,f=f.return){const p=f.memoizedProps;if(!p)continue;if(p.chart&&!out.chart)out.chart=p.chart;for(const k of ['adoptionOverall','adoptionVendor','spendPerEmployee','spendPerEmployeeCurated'])if(p[k]&&!out[k])out[k]=p[k]}return out}""")
-    (OUT/'ramp-raw.json').write_text(json.dumps(raw,indent=2))
-    require(all(raw.get(k) for k in ['chart','adoptionOverall','adoptionVendor','spendPerEmployee','spendPerEmployeeCurated']),'Ramp numeric datasets unavailable')
+    page.screenshot(path=str(OUT/'ramp-page.png'),full_page=True)
+    page.get_by_text('Total token spend by businesses, indexed',exact=False).wait_for(timeout=30000)
+    scripts=page.locator('script').all_text_contents()
+    script=next((x for x in scripts if 'self.__next_f.push(' in x and 'adoptionOverall' in x),None)
+    require(script is not None,'Ramp server data payload missing')
+    decoder=json.JSONDecoder();stream='';pos=0
+    while True:
+        pos=script.find('self.__next_f.push(',pos)
+        if pos<0:break
+        start=script.find('[',pos);arr,_=decoder.raw_decode(script[start:])
+        if arr[0]==1 and isinstance(arr[1],str):stream+=arr[1]
+        pos=start+1
+    marker='"adoptionOverall":';i=stream.find(marker);require(i>=0,'Ramp adoption dataset missing')
+    raw,_=decoder.raw_decode(stream[stream.rfind('{',0,i):])
+    raw['tokenVersion']=page.evaluate("()=>performance.getEntriesByType('resource').map(x=>x.name).find(x=>x.includes('/chart-data/tokenVolumes?version='))?.split('version=')[1]")
+    require(all(raw.get(k) for k in ['adoptionOverall','adoptionVendor','spendPerEmployee','spendPerEmployeeCurated']),'Ramp numeric datasets unavailable')
+    token_url=f'https://ramp.com/data/ai-index/chart-data/tokenVolumes?version={raw["tokenVersion"]}' if raw.get('tokenVersion') else None
+    token=[];token_error=None
+    if token_url:
+        try:
+            resp=page.request.get(token_url,timeout=60000);require(resp.ok,'Ramp token chart data HTTP failure')
+            token=resp.json();require(isinstance(token,list) and len(token)>100,'Ramp token chart dataset malformed')
+            require(all(x.get('period_grain')=='weekly' and x.get('metric_key') in ['token_spend','token_volume'] and x.get('dimension_type')=='model' and x.get('model_maker') and numeric(x.get('metric_value')) for x in token),'Ramp token rows malformed')
+        except Exception as e:token_error=str(e)
+    else:token_error='Ramp token data request was not observed in page resources.'
+    (OUT/'ramp-raw.json').write_text(json.dumps({'page':raw,'tokenRows':token,'tokenError':token_error},indent=2))
     a=max(raw['adoptionOverall'],key=lambda x:x['date_month']);period=a['date_month'];sp=next((x for x in raw['spendPerEmployee'] if x['date_month']==period),None)
     v={x['vendor']:x for x in raw['adoptionVendor'] if x['date_month']==period};fin=[x for x in raw['spendPerEmployeeCurated'] if x['date_month']==period and x['dimension_type']=='company_financing_status']
     require(sp and 'Anthropic'in v and 'OpenAI'in v and len(fin)>=3,'Ramp periods incomplete')
-    chart=raw['chart'];points=sorted(chart['points'],key=lambda x:x['date']);latest=points[-1];prior=points[-2]
-    makers=[{'maker':x['label'],'index':latest['values'][x['key']],'previousIndex':prior['values'].get(x['key'])} for x in chart['series'] if x['key'] in latest['values']]
-    result={'source':'https://ramp.com/data/ai-index','tokenSource':RAMP_URL,'period':period[:7],'periodLabel':datetime.strptime(period,'%Y-%m-%d').strftime('%B %Y'),'adoption':{'overall':a['adoption_rate_pct'],'overallChange':a['mom_change_pp'],'anthropic':v['Anthropic']['adoption_rate_pct'],'anthropicChange':v['Anthropic']['mom_change_pp'],'openai':v['OpenAI']['adoption_rate_pct'],'openaiChange':v['OpenAI']['mom_change_pp']},'spendPerEmployee':sp['median_pepm'],'top1SpendPerEmployee':sp['top_1_percent_median_pepm'],'top10SpendPerEmployee':sp['top_10_percent_median_pepm'],'financingStatus':[{'status':x['dimension_label'],'medianSpendPerEmployee':x['median_pepm']} for x in fin],'tokenSpend':{'periodEnd':latest['date'],'unit':'Index, not USD or tokens','makers':makers}}
+    # No current published index levels are present in the JSON route. Keep the last observed publisher index exactly as-is and flag just this subfeed stale; monthly page data remains independently refreshable.
+    token_spend=copy.deepcopy(anchor['tokenSpend'])
+    token_spend['stale']=True
+    token_spend['checkedAt']=now
+    token_spend['sourceCapturedAt']=anchor.get('capturedAt')
+    token_spend['staleSince']=anchor.get('sourceCapturedAt') or anchor.get('capturedAt')
+    token_spend['staleReason']=('Ramp current chart lacks verifiable published index levels; raw JSON USD totals cannot replace them.' if not token_error else 'Ramp publisher index markup missing; raw token dataset also unavailable: '+token_error[:170])
+    result={'source':'https://ramp.com/data/ai-index','tokenSource':'https://ramp.com/data/ai-index','tokenDataSource':token_url,'period':period[:7],'periodLabel':datetime.strptime(period,'%Y-%m-%d').strftime('%B %Y'),'adoption':{'overall':a['adoption_rate_pct'],'overallChange':a['mom_change_pp'],'anthropic':v['Anthropic']['adoption_rate_pct'],'anthropicChange':v['Anthropic']['mom_change_pp'],'openai':v['OpenAI']['adoption_rate_pct'],'openaiChange':v['OpenAI']['mom_change_pp']},'spendPerEmployee':sp['median_pepm'],'top1SpendPerEmployee':sp['top_1_percent_median_pepm'],'top10SpendPerEmployee':sp['top_10_percent_median_pepm'],'financingStatus':[{'status':x['dimension_label'],'medianSpendPerEmployee':x['median_pepm']} for x in fin],'tokenSpend':token_spend}
     page.screenshot(path=str(OUT/'ramp.png'),full_page=True)
     return result
 
@@ -59,13 +87,16 @@ def validate(o,r,old_o,old_r):
     require(0<r['spendPerEmployee']<=r['top10SpendPerEmployee']<=r['top1SpendPerEmployee'],'Spend ordering invalid')
     for k in ['spendPerEmployee','top1SpendPerEmployee','top10SpendPerEmployee']:require(numeric(r[k],.000001) and .25<=r[k]/old_r[k]<=4,'Spend move requires review')
     require({x['status'] for x in r['financingStatus']}=={x['status'] for x in old_r['financingStatus']} and all(numeric(x['medianSpendPerEmployee'],0) for x in r['financingStatus']),'Financing data invalid')
-    require(old_r['tokenSpend']['periodEnd']<=r['tokenSpend']['periodEnd']<=date.today().isoformat(),'Ramp token period regressed/future')
+    if r['tokenSpend'].get('stale'):
+        require(r['tokenSpend']['periodEnd']==old_r['tokenSpend']['periodEnd'] and r['tokenSpend']['unit']==old_r['tokenSpend']['unit'] and r['tokenSpend']['makers']==old_r['tokenSpend']['makers'],'Stale Ramp index must preserve last validated values exactly')
+    else:
+        require(old_r['tokenSpend']['periodEnd']<=r['tokenSpend']['periodEnd']<=date.today().isoformat(),'Ramp token period regressed/future')
     require(len(r['tokenSpend']['makers'])>=8 and all(numeric(x['index']) for x in r['tokenSpend']['makers']),'Ramp maker index invalid')
     require({'Anthropic','OpenAI'}<={x['maker'] for x in r['tokenSpend']['makers']},'Ramp major makers missing')
     require(len({x['maker'] for x in r['tokenSpend']['makers']})==len(r['tokenSpend']['makers']),'Duplicate Ramp makers')
     oldmakers={x['maker']:x['index'] for x in old_r['tokenSpend']['makers']}
     for x in r['tokenSpend']['makers']:
-        if x['maker'] in ['Anthropic','OpenAI']:require(.1<=x['index']/oldmakers[x['maker']]<=10,'Major maker index move requires review')
+        if x['maker'] in ['Anthropic','OpenAI'] and x['maker'] in oldmakers:require(.1<=x['index']/oldmakers[x['maker']]<=10,'Major maker index move requires review')
     oldfin={x['status']:x['medianSpendPerEmployee'] for x in old_r['financingStatus']}
     for x in r['financingStatus']:require(.25<=x['medianSpendPerEmployee']/oldfin[x['status']]<=4,'Financing spend move requires review')
 
@@ -75,7 +106,7 @@ def collect(old_o,old_r,now):
         args={'headless':True}
         if os.getenv('CHROME_PATH'):args.update(executable_path=os.environ['CHROME_PATH'],args=['--no-sandbox'])
         b=p.chromium.launch(**args);page=b.new_page(viewport={'width':1440,'height':1000})
-        try:o=read_openrouter(page);r=read_ramp(page)
+        try:o=read_openrouter(page);r=read_ramp(page,old_r,now)
         finally:b.close()
     validate(o,r,old_o,old_r)
     for x in [o,r]:x['capturedAt']=now;x['checkedAt']=now
@@ -103,7 +134,7 @@ def collect_partial(old_o,old_r,now):
         try:
             try:o_new=read_openrouter(page)
             except Exception as e:err_o=e
-            try:r_new=read_ramp(page)
+            try:r_new=read_ramp(page,old_r,now)
             except Exception as e:err_r=e
         finally:b.close()
     o=r=None;errors={}
@@ -117,6 +148,8 @@ def collect_partial(old_o,old_r,now):
     elif err_r is not None:errors['ramp']='collection failed: '+str(err_r)
     if o is not None:o['capturedAt']=now;o['checkedAt']=now
     else:o=mark_stale(old_o,now,errors.get('openrouter','unavailable'))
-    if r is not None:r['capturedAt']=now;r['checkedAt']=now
+    if r is not None:
+        r['capturedAt']=now;r['checkedAt']=now
+        if r['tokenSpend'].get('stale'):errors['ramp_token_index']='collection unavailable: '+r['tokenSpend'].get('staleReason','publisher index unavailable')
     else:r=mark_stale(old_r,now,errors.get('ramp','unavailable'))
     return o,r,errors
