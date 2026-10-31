@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parent
 data = json.loads((ROOT / "snapshots.json").read_text(encoding="utf-8"))
 wb = Workbook()
 wb.remove(wb.active)
-rows = {name: [] for name in ["Latitude plans", "Latitude locations", "OpenRouter models", "OpenRouter shares", "Ramp adoption", "Ramp financing", "Ramp token spend"]}
+rows = {name: [] for name in ["Latitude plans", "Latitude locations", "OpenRouter models", "OpenRouter shares", "Ramp adoption", "Ramp financing", "Ramp token spend", "Ramp source checks"]}
 for key, s in sorted(data["snapshots"].items()):
     for p in s["latitude"]["plans"]:
         row = {"snapshotDate": key, **{k: v for k, v in p.items() if not isinstance(v, (list, dict))}}
@@ -29,7 +29,8 @@ for key, s in sorted(data["snapshots"].items()):
     rows["OpenRouter shares"] += [{"snapshotDate": key, "weekBeginning": o["marketShareWeekOf"], **m} for m in o["marketShare"]]
     rows["Ramp adoption"].append({"snapshotDate": key, "period": r["period"], **r["adoption"], **{k: r.get(k) for k in ["spendPerEmployee", "top1SpendPerEmployee", "top10SpendPerEmployee"]}})
     rows["Ramp financing"] += [{"snapshotDate": key, "period": r["period"], **m} for m in r["financingStatus"]]
-    rows["Ramp token spend"] += [{"snapshotDate": key, "periodEnd": r["tokenSpend"]["periodEnd"], "unit": r["tokenSpend"]["unit"], **m} for m in r["tokenSpend"]["makers"]]
+    rows["Ramp source checks"] += [{"snapshotDate": key, "feed": "Ramp monthly datasets", "period": r["period"], "status": "current" if not r.get("stale") else "stale", "checkedAt": r.get("checkedAt"), "sourceUrl": r.get("source"), "sourceCapturedAt": r.get("capturedAt")}, {"snapshotDate": key, "feed": "Ramp weekly maker index", "period": r["tokenSpend"]["periodEnd"], "status": "stale" if r["tokenSpend"].get("stale") else "current", "checkedAt": r["tokenSpend"].get("checkedAt", r.get("checkedAt")), "sourceCapturedAt": r["tokenSpend"].get("staleSince", r.get("capturedAt")), "reason": r["tokenSpend"].get("staleReason")} ]
+    rows["Ramp token spend"] += [{"snapshotDate": key, "periodEnd": r["tokenSpend"]["periodEnd"], "unit": r["tokenSpend"]["unit"], "indexStatus": "stale" if r["tokenSpend"].get("stale") else "current", "indexSourceCapturedAt": r["tokenSpend"].get("sourceCapturedAt"), "staleReason": r["tokenSpend"].get("staleReason"), **m} for m in r["tokenSpend"]["makers"]]
 rows["GPU Economy quotes"] = []
 rows["Quote observations"] = []
 previous = None
