@@ -20,7 +20,8 @@ for kind in ['duplicate-model','missing-model','negative-tokens','shares-total',
     try:validate(a,b,o,r)
     except ValueError:print(kind,'rejected')
     else:raise AssertionError('Accepted bad data: '+kind)
+before=copy.deepcopy(r)
 s=mark_stale(r,'2026-10-22T08:30:00+11:00','collection failed: simulated outage')
-assert s['stale'] is True and s['staleSince']==r['capturedAt'] and s['checkedAt']=='2026-10-22T08:30:00+11:00' and r.get('stale') is None
+assert s['stale'] is True and s['staleSince']==r['capturedAt'] and s['checkedAt']=='2026-10-22T08:30:00+11:00' and r==before
 print('Stale fallback marking passed')
 print('All demand safety tests passed')
